@@ -8,3 +8,7 @@ body {
 
   font-family: "Helvetica Neue", "Lucida Grande", sans-serif;
 }
+
+#authenticate, #authenticated, #hook-repo {
+  display:  none;
+}

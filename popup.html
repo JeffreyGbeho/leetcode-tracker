@@ -11,13 +11,24 @@
       <button>Authenticate</button>
     </div>
 
+    <div id="hook-repo">
+      <input type="text" id="repo-name">
+      <button type="button" id="hook-button">Link my repository</button>
+      <div id="repo-name-error"></div>
+    </div>
+
     <div id="authenticated">
       <div>Problem solved: <span>0</span></div>
       <div>Easy problem : <span>0</span></div>
       <div>Medium problem: <span>0</span></div>
       <div>Hard problem : <span>0</span></div>
+
+
+      <div>
+        <a id="unlink-button">Unlink</a>
+      </div>
     </div>
 
-    <script type="module" src="popup.js"></script>
+    <script src="popup.js"></script>
   </body>
 </html>

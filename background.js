@@ -8,19 +8,11 @@ fetch('./config.json').then(response => response.json()).then(data => {
   );
 });
 
-function handleMessage(request, sender, sendResponse) {
+function handleMessage(request) {
   if (request) {
-        chrome.storage.local.set(
-          { leetcode_tracker_username: request.username }, () => {
-            console.log("Username set to " + request.username);
-          },
-        );
+        chrome.storage.local.set({ leetcode_tracker_username: request.username }, () => {});
 
-        chrome.storage.local.set({ leetcode_tracker_token: request.token }, () => {
-          console.log("Token set to " + request.token);
-        });
-    
-        // TODO: Close the current tab
+        chrome.storage.local.set({ leetcode_tracker_token: request.token }, () => {});
     }
 }
 
