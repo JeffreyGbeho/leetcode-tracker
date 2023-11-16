@@ -10,20 +10,12 @@
   "background": {
     "service_worker": "background.js"
   },
-  "permissions": [
-    "tabs",
-    "unlimitedStorage",
-    "storage"
-  ],
+  "permissions": ["tabs", "unlimitedStorage", "storage"],
   "content_scripts": [
     {
-      "matches": [
-        "https://leetcode.com/*",
-        "https://github.com/*"
-      ],
-      "js": [
-        "scripts/authorize.js"
-      ]
+      "matches": ["https://leetcode.com/*", "https://github.com/*"],
+      "js": ["scripts/authorize.js", "scripts/leetcode.js"],
+      "run_at": "document_idle"
     }
   ]
 }
