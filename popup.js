@@ -3,12 +3,12 @@ chrome.storage.local.get(
     "leetcode_tracker_token",
     "leetcode_tracker_username",
     "leetcode_tracker_mode",
-    "leetcode_tracker_hook",
+    "leetcode_tracker_repo",
   ],
   (result) => {
     if (!result.leetcode_tracker_token || !result.leetcode_tracker_username) {
       document.getElementById("authenticate").style.display = "block";
-    } else if (!result.leetcode_tracker_hook || !result.leetcode_tracker_mode) {
+    } else if (!result.leetcode_tracker_repo || !result.leetcode_tracker_mode) {
       document.getElementById("hook-repo").style.display = "block";
     } else {
       document.getElementById("authenticated").style.display = "block";
@@ -16,16 +16,30 @@ chrome.storage.local.get(
   }
 );
 
-document.getElementById("authenticate").addEventListener("click", () => {
-  fetch("./config.json")
-    .then((response) => response.json())
-    .then((data) => {
-      const url = `${data.URL}?client_id=${data.CLIENT_ID}&redirect_uri${
-        data.REDIRECT_URL
-      }&scope=${data.SCOPES.join(" ")}`;
+chrome.storage.local.get("leetcode_tracker_stats", (result) => {
+  console.log("okok");
+  if (result.leetcode_tracker_stats) {
+    const stats = result.leetcode_tracker_stats;
+    console.log("stats");
 
-      chrome.tabs.create({ url, active: true }, function () {});
-    });
+    document.getElementById("easy").textContent = stats.easy ? stats.easy : 0;
+    document.getElementById("medium").textContent = stats.medium
+      ? stats.medium
+      : 0;
+    document.getElementById("hard").textContent = stats.hard ? stats.hard : 0;
+    document.getElementById("problems-solved").textContent =
+      stats.problemsSolved ? stats.problemsSolved : 0;
+  }
+});
+
+document.getElementById("authenticate").addEventListener("click", () => {
+  chrome.runtime.sendMessage({ type: "getDataConfig" }).then((data) => {
+    const url = `${data.URL}?client_id=${data.CLIENT_ID}&redirect_uri${
+      data.REDIRECT_URL
+    }&scope=${data.SCOPES.join(" ")}`;
+
+    chrome.tabs.create({ url, active: true }, function () {});
+  });
 });
 
 document.getElementById("hook-button").addEventListener("click", () => {
@@ -59,8 +73,9 @@ async function linkRepo(storageInfo, repositoryName) {
     return;
   }
 
-  const configResponse = await fetch("./config.json");
-  const dataConfig = await configResponse.json();
+  const dataConfig = await chrome.runtime.sendMessage({
+    type: "getDataConfig",
+  });
 
   const repoResponse = await fetch(
     dataConfig.REPOSITORY_URL + username + "/" + repositoryName,
@@ -82,7 +97,7 @@ async function linkRepo(storageInfo, repositoryName) {
 
   chrome.storage.local.set({ leetcode_tracker_mode: "commit" }, () => {});
 
-  chrome.storage.local.set({ leetcode_tracker_hook: result.html_url }, () => {
+  chrome.storage.local.set({ leetcode_tracker_repo: repositoryName }, () => {
     document.getElementById("hook-repo").style.display = "none";
     document.getElementById("authenticated").style.display = "block";
   });
@@ -90,7 +105,7 @@ async function linkRepo(storageInfo, repositoryName) {
 
 function unlinkRepo() {
   chrome.storage.local.remove(
-    ["leetcode_tracker_mode", "leetcode_tracker_hook"],
+    ["leetcode_tracker_mode", "leetcode_tracker_repo"],
     () => {
       document.getElementById("authenticated").style.display = "none";
       document.getElementById("hook-repo").style.display = "block";
