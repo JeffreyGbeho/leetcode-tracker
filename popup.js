@@ -17,10 +17,8 @@ chrome.storage.local.get(
 );
 
 chrome.storage.local.get("leetcode_tracker_stats", (result) => {
-  console.log("okok");
   if (result.leetcode_tracker_stats) {
     const stats = result.leetcode_tracker_stats;
-    console.log("stats");
 
     document.getElementById("easy").textContent = stats.easy ? stats.easy : 0;
     document.getElementById("medium").textContent = stats.medium

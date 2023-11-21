@@ -28,8 +28,7 @@ async function getUserInfo(accessToken) {
   const data = await response.json();
 
   chrome.runtime.sendMessage({
-    closeWebPage: true,
-    isSuccess: true,
+    type: "saveUserInfos",
     token: accessToken,
     username: data.login,
   });
