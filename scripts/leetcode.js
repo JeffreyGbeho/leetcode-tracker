@@ -87,6 +87,17 @@ function main() {
       window.localStorage.setItem("global_difficulty", difficulty);
     }
 
+    // Description
+    const problemDescription = document.querySelector(
+      'div[data-track-load="description_content"]'
+    );
+    if (problemDescription) {
+      window.localStorage.setItem(
+        "global_description",
+        problemDescription.textContent
+      );
+    }
+
     if (buttonSubmit) {
       clearInterval(mainInterval);
     } else {
@@ -214,6 +225,27 @@ async function createFileGitRepository(dataConfig, result) {
     }
   );
 
+  await fetch(
+    dataConfig.REPOSITORY_URL +
+      result.leetcode_tracker_username +
+      "/" +
+      result.leetcode_tracker_repo +
+      "/contents/" +
+      problemName +
+      "/README.md",
+    {
+      method: "PUT",
+      headers: {
+        ...dataConfig.HEADERS,
+        Authorization: `token ${result.leetcode_tracker_token}`,
+      },
+      body: JSON.stringify({
+        message: "Adding readme file",
+        content: btoa(window.localStorage.getItem("global_description")),
+      }),
+    }
+  );
+
   if (repoResponse.status === 201) {
     chrome.runtime.sendMessage({
       type: "updateDifficultyStats",
@@ -223,4 +255,3 @@ async function createFileGitRepository(dataConfig, result) {
 }
 
 main();
-// test();
