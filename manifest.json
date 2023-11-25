@@ -7,6 +7,11 @@
   "action": {
     "default_popup": "popup.html"
   },
+  "icons": {
+    "16": "assets/logo-leetcode-tracker/Leetcode-tracker-500.png",
+    "48": "assets/logo-leetcode-tracker/Leetcode-tracker-500.png",
+    "128": "assets/logo-leetcode-tracker/Leetcode-tracker-500.png"
+  },
   "background": {
     "service_worker": "background.js",
     "type": "module"
