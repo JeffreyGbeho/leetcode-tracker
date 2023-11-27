@@ -5,8 +5,7 @@
 </h1>
 
 <div align="center">
-[![Chrome]([https://user-images.githubusercontent.com/53124886/111952712-34f12300-8aee-11eb-9fdd-ad579a1eb235.png](https://github.com/JeffreyGbeho/leetcode-tracker/assets/150350006/e509a587-65c6-4b7e-adaf-0e59c7b72a23))](https://chromewebstore.google.com/detail/leetcode-tracker/bnhnpmglielpbmnnhhbcfnljhijfppbm)
-![111952712-34f12300-8aee-11eb-9fdd-ad579a1eb235](https://github.com/JeffreyGbeho/leetcode-tracker/assets/150350006/e509a587-65c6-4b7e-adaf-0e59c7b72a23)
+  [![Foo](https://github.com/JeffreyGbeho/leetcode-tracker/assets/150350006/e509a587-65c6-4b7e-adaf-0e59c7b72a23)](https://chromewebstore.google.com/detail/leetcode-tracker/bnhnpmglielpbmnnhhbcfnljhijfppbm)
 </div>
 
 
