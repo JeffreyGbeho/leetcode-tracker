@@ -1,13 +1,11 @@
 ﻿<h1 align="center">
-  <a href="https://standardjs.com"><img src="assets/logo-leetcode-tracker/Leetcode-tracker-500.png" alt="Leetcode Tracker" width="400"></a>
-  <br>
   <a href="https://chromewebstore.google.com/detail/leetcode-tracker/bnhnpmglielpbmnnhhbcfnljhijfppbm">Leetcode Tracker</a> - Automatically sync your leetcode submission to GitHub.
   <br>
   <br>
 </h1>
 
 <div align="center">
-[![Chrome](https://user-images.githubusercontent.com/53124886/111952712-34f12300-8aee-11eb-9fdd-ad579a1eb235.png)](https://chromewebstore.google.com/detail/leetcode-tracker/bnhnpmglielpbmnnhhbcfnljhijfppbm)
+[![Chrome]([https://user-images.githubusercontent.com/53124886/111952712-34f12300-8aee-11eb-9fdd-ad579a1eb235.png](https://github.com/JeffreyGbeho/leetcode-tracker/assets/150350006/e509a587-65c6-4b7e-adaf-0e59c7b72a23))](https://chromewebstore.google.com/detail/leetcode-tracker/bnhnpmglielpbmnnhhbcfnljhijfppbm)
 ![111952712-34f12300-8aee-11eb-9fdd-ad579a1eb235](https://github.com/JeffreyGbeho/leetcode-tracker/assets/150350006/e509a587-65c6-4b7e-adaf-0e59c7b72a23)
 </div>
 
