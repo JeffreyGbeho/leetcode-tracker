@@ -5,7 +5,7 @@
 </h1>
 
 <div align="center">
-  <a href="https://chromewebstore.google.com/detail/leetcode-tracker/bnhnpmglielpbmnnhhbcfnljhijfppbm" rel="Download leetcode tracker extension"><img src="[/path/to/file](https://github.com/JeffreyGbeho/leetcode-tracker/assets/150350006/e509a587-65c6-4b7e-adaf-0e59c7b72a23)" alt="Leetcode tracker extension chrome store" /></a>
+  <a href="https://chromewebstore.google.com/detail/leetcode-tracker/bnhnpmglielpbmnnhhbcfnljhijfppbm" rel="Download leetcode tracker extension"><img src="https://github.com/JeffreyGbeho/leetcode-tracker/assets/150350006/e509a587-65c6-4b7e-adaf-0e59c7b72a23" alt="Leetcode tracker extension chrome store" /></a>
 </div>
 
 
