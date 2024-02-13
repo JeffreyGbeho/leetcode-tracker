@@ -34,9 +34,9 @@ function getLanguageExtension() {
 }
 
 function getDifficulty() {
-  const easy = document.querySelector("div.text-olive");
-  const medium = document.querySelector("div.text-yellow");
-  const hard = document.querySelector("div.text-pink");
+  const easy = document.querySelector("div.text-difficulty-easy");
+  const medium = document.querySelector("div.text-difficulty-medium");
+  const hard = document.querySelector("div.text-difficulty-hard");
 
   if (easy) {
     return "easy";
