@@ -1,7 +1,7 @@
 const languageExtensions = {
   cpp: ".cpp",
   java: ".java",
-  ython: ".py",
+  python: ".py",
   python3: ".py",
   c: ".c",
   csharp: ".cs",
@@ -19,239 +19,238 @@ const languageExtensions = {
   erlang: ".erl",
   elixir: ".ex",
 };
-var problemName = "";
 
-function getLanguageExtension() {
-  const language = window.localStorage
-    .getItem("global_lang")
-    .replaceAll('"', "");
-
-  if (language) {
-    return languageExtensions[language];
+class Problem {
+  constructor() {
+    this.name = "";
+    this.slug = "";
+    this.difficulty = "";
+    this.description = "";
   }
 
-  return null;
-}
-
-function getDifficulty() {
-  const easy = document.querySelector("div.text-difficulty-easy");
-  const medium = document.querySelector("div.text-difficulty-medium");
-  const hard = document.querySelector("div.text-difficulty-hard");
-
-  if (easy) {
-    return "easy";
-  } else if (medium) {
-    return "medium";
-  } else if (hard) {
-    return "hard";
+  updateFromDOM() {
+    this.updateSlug();
+    this.updateDifficulty();
+    this.updateDescription();
   }
 
-  return null;
-}
-
-function formatProblemName(problemName) {
-  problemName = problemName.replace(".", "-").split(" ").join("");
-  return problemName;
-}
-
-function getCodeFormatted() {
-  let codeLines = document.querySelectorAll(".view-line");
-  let codeFormatted = "";
-
-  for (let i = 0; i < codeLines.length; i++) {
-    codeFormatted += codeLines[i].textContent + "\n";
-  }
-
-  return codeFormatted;
-}
-
-function main() {
-  let mainInterval = setInterval(() => {
-    const buttonSubmit = document.querySelector(
-      'button[data-e2e-locator="console-submit-button"]:not([data-state="closed"])'
-    );
-
-    // Problem Name
+  updateSlug() {
     const hrefSelector = window.location.pathname.replace("description/", "");
     const problemNameSelector = document.querySelector(
-      "a[href='" + hrefSelector + "']"
+      `a[href='${hrefSelector}']`
     );
     if (problemNameSelector) {
-      const problemSlug = formatProblemName(problemNameSelector.textContent);
-      window.localStorage.setItem("global_problem_slug", problemSlug);
+      this.slug = this.formatProblemName(problemNameSelector.textContent);
     }
+  }
 
-    // Difficulty
-    const difficulty = getDifficulty();
-    if (difficulty) {
-      window.localStorage.setItem("global_difficulty", difficulty);
+  updateDifficulty() {
+    const easy = document.querySelector("div.text-difficulty-easy");
+    const medium = document.querySelector("div.text-difficulty-medium");
+    const hard = document.querySelector("div.text-difficulty-hard");
+
+    if (easy) {
+      this.difficulty = "easy";
+    } else if (medium) {
+      this.difficulty = "medium";
+    } else if (hard) {
+      this.difficulty = "hard";
+    } else {
+      this.difficulty = "";
     }
+  }
 
-    // Description
+  updateDescription() {
     const problemDescription = document.querySelector(
       'div[data-track-load="description_content"]'
     );
-    if (problemDescription) {
-      window.localStorage.setItem(
-        "global_description",
-        problemDescription.textContent
-      );
-    }
+    this.description = problemDescription.textContent;
+  }
 
-    if (buttonSubmit) {
-      clearInterval(mainInterval);
+  formatProblemName(problemName) {
+    return problemName.replace(".", "-").split(" ").join("");
+  }
+}
+
+class Github {
+  constructor(problem) {
+    this.problem = problem;
+  }
+
+  getLanguageExtension() {
+    const language = JSON.parse(window.localStorage.getItem("global_lang"));
+    return languageExtensions[language] || null;
+  }
+
+  getFormattedCode() {
+    const language = JSON.parse(window.localStorage.getItem("global_lang"));
+    const codeElement = document.querySelector(`code.language-${language}`);
+    return codeElement ? codeElement.textContent : "";
+  }
+
+  async submitToGitHub(dataConfig, userConfig) {
+    const fileExists = await this.checkFileExistence(dataConfig, userConfig);
+    if (fileExists) {
+      await this.updateFile(dataConfig, userConfig, fileExists);
     } else {
-      return;
+      await this.createFile(dataConfig, userConfig);
     }
+  }
 
-    // Click submit button
-    buttonSubmit.addEventListener("click", () => {
-      main();
+  async checkFileExistence(dataConfig, userConfig) {
+    const url = this.buildGitHubUrl(dataConfig, userConfig);
+    const response = await this.fetchWithAuth(
+      url,
+      "GET",
+      dataConfig,
+      userConfig
+    );
+    return response.ok ? await response.json() : null;
+  }
 
-      let interval = setInterval(() => {
-        const accepted = document.querySelector(
-          'span[data-e2e-locator="submission-result"]'
-        );
-        if (accepted && accepted.textContent === "Accepted") {
-          clearInterval(interval);
-          checkFileExistence();
-        }
-      }, 1000);
-    });
-  }, 1000);
+  async updateFile(dataConfig, userConfig, existingFile) {
+    const url = this.buildGitHubUrl(dataConfig, userConfig);
+    const body = {
+      message: `Update file ${new Date().toLocaleString()}`,
+      content: btoa(this.getFormattedCode()),
+      sha: existingFile.sha,
+    };
+    await this.fetchWithAuth(url, "PUT", dataConfig, userConfig, body);
+  }
+
+  async createFile(dataConfig, userConfig) {
+    const codeUrl = this.buildGitHubUrl(dataConfig, userConfig);
+    const readmeUrl = this.buildGitHubUrl(dataConfig, userConfig, "README.md");
+
+    const codeBody = {
+      message: "Create file",
+      content: btoa(this.getFormattedCode()),
+    };
+    const readmeBody = {
+      message: "Adding readme file",
+      content: btoa(this.problem.description),
+    };
+
+    const [codeResponse] = await Promise.all([
+      this.fetchWithAuth(codeUrl, "PUT", dataConfig, userConfig, codeBody),
+      this.fetchWithAuth(readmeUrl, "PUT", dataConfig, userConfig, readmeBody),
+    ]);
+
+    if (codeResponse.status === 201) {
+      chrome.runtime.sendMessage({
+        type: "updateDifficultyStats",
+        difficulty: this.problem.difficulty,
+      });
+    }
+  }
+
+  buildGitHubUrl(dataConfig, userConfig, file = "") {
+    const fileName =
+      file || `${this.problem.slug}${this.getLanguageExtension()}`;
+    return `${dataConfig.REPOSITORY_URL}${userConfig.leetcode_tracker_username}/${userConfig.leetcode_tracker_repo}/contents/${this.problem.slug}/${fileName}`;
+  }
+
+  async fetchWithAuth(url, method, dataConfig, userConfig, body = null) {
+    const options = {
+      method,
+      headers: {
+        ...dataConfig.HEADERS,
+        Authorization: `token ${userConfig.leetcode_tracker_token}`,
+      },
+    };
+    if (body) options.body = JSON.stringify(body);
+    return fetch(url, options);
+  }
 }
 
-function checkFileExistence() {
-  chrome.storage.local.get(
-    [
-      "leetcode_tracker_repo",
-      "leetcode_tracker_username",
-      "leetcode_tracker_token",
-    ],
-    (result) => {
-      if (
-        result.leetcode_tracker_repo &&
-        result.leetcode_tracker_username &&
-        result.leetcode_tracker_token
-      ) {
-        chrome.runtime
-          .sendMessage({ type: "getDataConfig" })
-          .then((response) => {
-            getRepository(response, result);
-          });
+class LeetcodeTracker {
+  constructor() {
+    this.problem = new Problem();
+    this.github = new Github(this.problem);
+  }
+
+  async init() {
+    console.log("INIT");
+    await this.waitForElement(
+      'button[data-e2e-locator="console-submit-button"]:not([data-state="closed"])'
+    );
+    console.log("PROBLEM FOUND");
+    this.problem.updateFromDOM();
+    this.setupSubmitButton();
+  }
+
+  async waitForElement(selector) {
+    return new Promise((resolve) => {
+      if (document.querySelector(selector)) {
+        return resolve(document.querySelector(selector));
       }
-    }
-  );
-}
 
-async function getRepository(dataConfig, result) {
-  problemName = window.localStorage.getItem("global_problem_slug");
+      const observer = new MutationObserver(() => {
+        if (document.querySelector(selector)) {
+          resolve(document.querySelector(selector));
+          observer.disconnect();
+        }
+      });
 
-  const repoResponse = await fetch(
-    dataConfig.REPOSITORY_URL +
-      result.leetcode_tracker_username +
-      "/" +
-      result.leetcode_tracker_repo +
-      "/contents/" +
-      problemName +
-      "/" +
-      problemName +
-      getLanguageExtension(),
-    {
-      method: "GET",
-      headers: {
-        ...dataConfig.HEADERS,
-        Authorization: `token ${result.leetcode_tracker_token}`,
-      },
-    }
-  );
-  const isRepositoryExists = await repoResponse.json();
-
-  if (repoResponse.status !== 200) {
-    createFileGitRepository(dataConfig, result);
-    return;
-  } else {
-    updateFileGitRepository(dataConfig, result, isRepositoryExists.sha);
-  }
-}
-
-async function updateFileGitRepository(dataConfig, result, sha) {
-  await fetch(
-    dataConfig.REPOSITORY_URL +
-      result.leetcode_tracker_username +
-      "/" +
-      result.leetcode_tracker_repo +
-      "/contents/" +
-      problemName +
-      "/" +
-      problemName +
-      getLanguageExtension(),
-    {
-      method: "PUT",
-      headers: {
-        ...dataConfig.HEADERS,
-        Authorization: `token ${result.leetcode_tracker_token}`,
-      },
-      body: JSON.stringify({
-        message: "Update file " + new Date().toLocaleString(),
-        content: btoa(getCodeFormatted()),
-        sha: sha,
-      }),
-    }
-  );
-}
-
-async function createFileGitRepository(dataConfig, result) {
-  const repoResponse = await fetch(
-    dataConfig.REPOSITORY_URL +
-      result.leetcode_tracker_username +
-      "/" +
-      result.leetcode_tracker_repo +
-      "/contents/" +
-      problemName +
-      "/" +
-      problemName +
-      getLanguageExtension(),
-    {
-      method: "PUT",
-      headers: {
-        ...dataConfig.HEADERS,
-        Authorization: `token ${result.leetcode_tracker_token}`,
-      },
-      body: JSON.stringify({
-        message: "Create file",
-        content: btoa(getCodeFormatted()),
-      }),
-    }
-  );
-
-  await fetch(
-    dataConfig.REPOSITORY_URL +
-      result.leetcode_tracker_username +
-      "/" +
-      result.leetcode_tracker_repo +
-      "/contents/" +
-      problemName +
-      "/README.md",
-    {
-      method: "PUT",
-      headers: {
-        ...dataConfig.HEADERS,
-        Authorization: `token ${result.leetcode_tracker_token}`,
-      },
-      body: JSON.stringify({
-        message: "Adding readme file",
-        content: btoa(window.localStorage.getItem("global_description")),
-      }),
-    }
-  );
-
-  if (repoResponse.status === 201) {
-    chrome.runtime.sendMessage({
-      type: "updateDifficultyStats",
-      difficulty: window.localStorage.getItem("global_difficulty"),
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
     });
   }
+
+  setupSubmitButton() {
+    const submitButton = document.querySelector(
+      'button[data-e2e-locator="console-submit-button"]'
+    );
+    submitButton.addEventListener("click", () => {
+      this.handleSubmission();
+    });
+  }
+
+  async handleSubmission() {
+    await this.waitForElement('span[data-e2e-locator="submission-result"]');
+    const accepted = document.querySelector(
+      'span[data-e2e-locator="submission-result"]'
+    );
+    if (accepted && accepted.textContent === "Accepted") {
+      this.submitToGithub();
+    }
+  }
+
+  async submitToGithub() {
+    const userConfig = await this.getUserConfig();
+    if (this.isConfigValid(userConfig)) {
+      const dataConfig = await this.getDataConfig();
+      await this.github.submitToGitHub(dataConfig, userConfig);
+    }
+  }
+
+  async getUserConfig() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(
+        [
+          "leetcode_tracker_repo",
+          "leetcode_tracker_username",
+          "leetcode_tracker_token",
+        ],
+        resolve
+      );
+    });
+  }
+
+  isConfigValid(config) {
+    return (
+      config.leetcode_tracker_repo &&
+      config.leetcode_tracker_username &&
+      config.leetcode_tracker_token
+    );
+  }
+
+  async getDataConfig() {
+    return chrome.runtime.sendMessage({ type: "getDataConfig" });
+  }
 }
 
-main();
+const tracker = new LeetcodeTracker();
+tracker.init();

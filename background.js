@@ -1,5 +1,9 @@
 import { config } from "./config.js";
 
+/**
+ * Save github's user infors in the local storage
+ * @param {*} request // Data send by the content script.
+ */
 function saveUserInfos(request) {
   chrome.storage.local.set(
     { leetcode_tracker_username: request.username },
@@ -9,6 +13,10 @@ function saveUserInfos(request) {
   chrome.storage.local.set({ leetcode_tracker_token: request.token }, () => {});
 }
 
+/**
+ * Update the stats of the user in the local storage to display them in the popup.
+ * @param {*} request // Data send by the content script.
+ */
 function updateStats(request) {
   chrome.storage.local.get(["leetcode_tracker_stats"], (result) => {
     const stats = result.leetcode_tracker_stats
@@ -24,6 +32,9 @@ function updateStats(request) {
   });
 }
 
+/**
+ * Listen for messages from the content script.
+ */
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === "getDataConfig") {
     sendResponse(config);

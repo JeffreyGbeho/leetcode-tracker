@@ -1,5 +1,9 @@
 let dataConfig = {};
 
+/**
+ * Get github's access token.
+ * @param {*} code
+ */
 async function getAccessToken(code) {
   const response = await fetch(dataConfig.ACCESS_TOKEN_URL, {
     method: "POST",
@@ -16,6 +20,10 @@ async function getAccessToken(code) {
   getUserInfo(data.access_token);
 }
 
+/**
+ * Get github's user informations with the access token and save them in the local storage.
+ * @param {*} accessToken
+ */
 async function getUserInfo(accessToken) {
   const response = await fetch(dataConfig.USER_INFO_URL, {
     method: "GET",
@@ -34,6 +42,9 @@ async function getUserInfo(accessToken) {
   });
 }
 
+/**
+ * Retrieve config file from the background script.
+ */
 if (window.location.host === "github.com") {
   const code = window.location.search.split("=")[1];
 
