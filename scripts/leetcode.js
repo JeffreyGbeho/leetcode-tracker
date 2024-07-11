@@ -64,7 +64,9 @@ class Problem {
     const problemDescription = document.querySelector(
       'div[data-track-load="description_content"]'
     );
-    this.description = problemDescription.textContent;
+    if (problemDescription) {
+      this.description = problemDescription.textContent;
+    }
   }
 
   formatProblemName(problemName) {
@@ -128,7 +130,7 @@ class Github {
     };
     const readmeBody = {
       message: "Adding readme file",
-      content: btoa(this.problem.description),
+      content: btoa(this.problem.description ? this.problem.description : ""),
     };
 
     const [codeResponse] = await Promise.all([
@@ -163,18 +165,49 @@ class Github {
   }
 }
 
+class Route {
+  constructor() {
+    this.problemSlug = this.extractProblemSlugFromUrl(location.pathname);
+    this.observeUrlChanges();
+  }
+
+  observeUrlChanges() {
+    let lastUrl = location.href;
+    new MutationObserver(() => {
+      const url = location.href;
+      if (url !== lastUrl) {
+        lastUrl = url;
+        this.handleUrlChange();
+      }
+    }).observe(document, { subtree: true, childList: true });
+  }
+
+  async handleUrlChange() {
+    if (
+      this.problemSlug !== this.extractProblemSlugFromUrl(location.pathname)
+    ) {
+      tracker = new LeetcodeTracker();
+      tracker.init();
+    }
+  }
+
+  extractProblemSlugFromUrl(pathname) {
+    const match = pathname.match(/\/problems\/([^/]+)/);
+    return match ? match[1] : null;
+  }
+}
+
 class LeetcodeTracker {
   constructor() {
     this.problem = new Problem();
     this.github = new Github(this.problem);
+    this.route = new Route();
   }
 
   async init() {
-    console.log("INIT");
     await this.waitForElement(
       'button[data-e2e-locator="console-submit-button"]:not([data-state="closed"])'
     );
-    console.log("PROBLEM FOUND");
     this.problem.updateFromDOM();
     this.setupSubmitButton();
   }
@@ -252,5 +285,5 @@ class LeetcodeTracker {
   }
 }
 
-const tracker = new LeetcodeTracker();
+var tracker = new LeetcodeTracker();
 tracker.init();
