@@ -19,12 +19,17 @@
       </div>
 
       <div id="authenticate">
+        <h2 class="auth-title">Welcome !</h2>
         <p>
           Authenticate with your Github account to track your progress on
           Leetcode.
         </p>
         <div id="github-authenticate-container">
-          <button class="btn btn-dark">
+          <button
+            type="button"
+            class="button-auth"
+            id="github-authenticate-button"
+          >
             <img
               id="github-mark"
               src="./assets/icons/github/github-mark-white.svg"
@@ -36,7 +41,11 @@
       </div>
 
       <div id="hook-repo">
-        <p>Hook your repository to track your progress.</p>
+        <h2 class="auth-title">Hook your repository</h2>
+        <p>
+          Create a github repository and enter the name to link it for tracking
+          your progress.
+        </p>
         <div class="input-group">
           <input
             type="text"
@@ -44,13 +53,17 @@
             class="form-control"
             placeholder="Ex: leetcode-solutions"
           />
-          <div class="input-group-append">
-            <button type="button" id="hook-button" class="btn btn-dark">
-              Link
-            </button>
+          <div class="input-group-text btn-suffix" id="hook-button">
+            <span>Link</span>
           </div>
         </div>
         <div id="repo-name-error" class="text-danger font-italic"></div>
+
+        <div class="button-auth-container">
+          <button type="button" class="button-auth" id="change-account-button">
+            Change github account
+          </button>
+        </div>
       </div>
 
       <div id="authenticated">
@@ -64,11 +77,12 @@
             <div id="hard">0</div>
           </div>
 
-          <div style="text-align: center">
+          <div style="text-align: center; margin-top: 5px">
             <a
               href="https://github.com"
               target="_blank"
               style="justify-content: center"
+              id="repository-link"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -92,12 +106,6 @@
           </div>
         </div>
 
-        <div>
-          <div id="total-problems-solved">
-            Problems solved : <span id="problems-solved">0</span>
-          </div>
-        </div>
-
         <div class="user-infos">
           <h3 class="subtitle">Settings</h3>
 
@@ -105,11 +113,27 @@
             <div class="user-infos-item">
               <div>
                 <div class="user-infos-item-label">Repository</div>
-                <div class="user-infos-item-value">repo name</div>
+                <div class="user-infos-item-value" id="repository-name">
+                  repo name
+                </div>
               </div>
               <div>
                 <button type="button" class="primary-button" id="unlink-button">
                   Unlink
+                </button>
+              </div>
+            </div>
+
+            <div class="user-infos-item">
+              <div>
+                <div class="user-infos-item-label">Username</div>
+                <div class="user-infos-item-value" id="github-username">
+                  username
+                </div>
+              </div>
+              <div>
+                <button type="button" class="primary-button" id="logout-button">
+                  Logout
                 </button>
               </div>
             </div>

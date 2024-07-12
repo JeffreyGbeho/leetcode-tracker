@@ -1,16 +1,21 @@
 const DOM = {
   authenticate: document.getElementById("authenticate"),
+  authenticateButton: document.getElementById("github-authenticate-button"),
   hookRepo: document.getElementById("hook-repo"),
   authenticated: document.getElementById("authenticated"),
   repoName: document.getElementById("repo-name"),
   repoNameError: document.getElementById("repo-name-error"),
   hookButton: document.getElementById("hook-button"),
   unlinkButton: document.getElementById("unlink-button"),
+  repositoryName: document.getElementById("repository-name"),
+  repositoryLink: document.getElementById("repository-link"),
+  githubUsername: document.getElementById("github-username"),
+  logoutButton: document.getElementById("logout-button"),
+  changeAccountButton: document.getElementById("change-account-button"),
   stats: {
     easy: document.getElementById("easy"),
     medium: document.getElementById("medium"),
     hard: document.getElementById("hard"),
-    problemsSolved: document.getElementById("problems-solved"),
   },
 };
 
@@ -21,12 +26,14 @@ class PopupManager {
 
   initializeEventListeners() {
     document.addEventListener("DOMContentLoaded", this.setupLinks.bind(this));
-    DOM.authenticate.addEventListener(
+    DOM.authenticateButton.addEventListener(
       "click",
       this.handleAuthentication.bind(this)
     );
     DOM.hookButton.addEventListener("click", this.handleHookRepo.bind(this));
     DOM.unlinkButton.addEventListener("click", this.unlinkRepo.bind(this));
+    DOM.logoutButton.addEventListener("click", this.logout.bind(this));
+    DOM.changeAccountButton.addEventListener("click", this.logout.bind(this));
   }
 
   setupLinks() {
@@ -51,22 +58,36 @@ class PopupManager {
       DOM.authenticated.style.display = "block";
     }
 
+    this.updateUserInfos();
     this.updateStats();
   }
 
   async logout() {
     try {
-      await chrome.storage.local.remove([
-        "leetcode_tracker_token",
-        "leetcode_tracker_username",
-        "leetcode_tracker_mode",
-        "leetcode_tracker_repo",
-      ]);
+      await chrome.storage.local.clear();
+
       DOM.authenticate.style.display = "block";
       DOM.hookRepo.style.display = "none";
       DOM.authenticated.style.display = "none";
     } catch (error) {
       console.error("Error logging out:", error);
+    }
+  }
+
+  async updateUserInfos() {
+    const { leetcode_tracker_repo, leetcode_tracker_username } =
+      await chrome.storage.local.get([
+        "leetcode_tracker_repo",
+        "leetcode_tracker_username",
+      ]);
+    if (leetcode_tracker_repo) {
+      DOM.repositoryName.textContent = leetcode_tracker_repo;
+    }
+    if (leetcode_tracker_username) {
+      DOM.githubUsername.textContent = leetcode_tracker_username;
+    }
+    if (leetcode_tracker_username && leetcode_tracker_repo) {
+      DOM.repositoryLink.href = `https://github.com/${leetcode_tracker_username}/${leetcode_tracker_repo}`;
     }
   }
 

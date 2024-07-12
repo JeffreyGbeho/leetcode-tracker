@@ -22,7 +22,6 @@ const languageExtensions = {
 
 class Problem {
   constructor() {
-    this.name = "";
     this.slug = "";
     this.difficulty = "";
     this.description = "";

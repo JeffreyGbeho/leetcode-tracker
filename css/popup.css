@@ -22,6 +22,7 @@
   --black: #0F0F0F;
   --background: #FFF;
   --title: #696969;
+  --error: #F44336;
 }
 
 body {
@@ -49,6 +50,34 @@ body {
   margin-top: 15px;
 }
 
+.button-auth-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+button.button-auth {
+  background-color: var(--black);
+  color: white;
+  border: none;
+  padding: 10px 32px;
+  border-radius: 300px;
+  cursor: pointer;
+  font-family: 'Poppins-Regular';
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+#repo-name-error {
+  font-family: "Poppins-Regular";
+  font-size: 12px;
+  color: var(--error);
+  padding: 0 16px;
+}
+
 a, a:hover, a:visited {
   color: var(--primary);
   font-size: 12px;
@@ -59,8 +88,31 @@ a, a:hover, a:visited {
   gap: 7px;
 }
 
+div.input-group-text.btn-suffix {
+  cursor: pointer;
+  font-family: 'Poppins-Regular';
+  font-size: 14px;
+  color: white;
+  background-color: var(--black);
+}
+
+/* input.form-control:focus {
+  border-color: var(--black);
+  box-shadow: none;
+} */
+
 p {
   font-size: 14px;
+  text-align: center;
+  color: var(--title);
+  font-family: 'Poppins-Regular';
+}
+
+h2.auth-title {
+  font-family: "Poppins-Bold";
+  font-size: 20px;
+  color: var(--black);
+  margin-top: 20px;
   text-align: center;
 }
 
