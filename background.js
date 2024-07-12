@@ -1,4 +1,4 @@
-import { config } from "./config.js";
+import { ENV } from "./environment.js";
 
 /**
  * Save github's user infors in the local storage
@@ -37,7 +37,7 @@ function updateStats(request) {
  */
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === "getDataConfig") {
-    sendResponse(config);
+    sendResponse(ENV);
   } else if (request.type === "saveUserInfos") {
     saveUserInfos(request);
   } else if (request.type === "updateDifficultyStats") {

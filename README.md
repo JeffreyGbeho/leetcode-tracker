@@ -8,7 +8,6 @@
   <a href="https://chromewebstore.google.com/detail/leetcode-tracker/bnhnpmglielpbmnnhhbcfnljhijfppbm" rel="Download leetcode tracker extension"><img src="https://embedsignage.com/wp-content/uploads/2016/04/embed-signage-chromeos-web-store-button.png" alt="Leetcode tracker extension chrome store" width="300" /></a>
 </div>
 
-
 ## What is Leetcode Tracker?
 
 <p>A chrome extension that automatically pushes your code to GitHub when you pass all tests on a <a href="http://leetcode.com/problems/">Leetcode problem</a>. </p>
@@ -42,10 +41,10 @@ There were many Chrome extensions to automatically synchronize LeetCode code wit
 
 <ol>
   <li>Fork this repo and clone to your local machine</li>
-  <li>Create new file config.js in cloned folder</li>
+  <li>Create new file environment.js in cloned folder</li>
   <li>Copy/paste the following code in the new file and patch CLIENT_SECRET and CLIENT_ID keys.</li>
   <code>
-export const config = {
+export const ENV = {
   URL: "https://github.com/login/oauth/authorize",
   ACCESS_TOKEN_URL: "https://github.com/login/oauth/access_token",
   REDIRECT_URL: " https://github.com/",
