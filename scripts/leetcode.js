@@ -22,22 +22,26 @@ const languageExtensions = {
 
 class Problem {
   constructor() {
+    this.name = "";
     this.slug = "";
     this.difficulty = "";
     this.description = "";
+    this.utilsService = new Utils();
   }
 
-  updateFromDOM() {
+  async updateFromDOM() {
     this.updateSlug();
-    this.updateDifficulty();
     this.updateDescription();
+    this.updateDifficulty();
   }
 
-  updateSlug() {
+  async updateSlug() {
     const hrefSelector = window.location.pathname.replace("description/", "");
-    const problemNameSelector = document.querySelector(
+
+    const problemNameSelector = await this.utilsService.waitForElement(
       `a[href='${hrefSelector}']`
     );
+
     if (problemNameSelector) {
       this.slug = this.formatProblemName(problemNameSelector.textContent);
     }
@@ -59,8 +63,8 @@ class Problem {
     }
   }
 
-  updateDescription() {
-    const problemDescription = document.querySelector(
+  async updateDescription() {
+    const problemDescription = await this.utilsService.waitForElement(
       'div[data-track-load="description_content"]'
     );
     if (problemDescription) {
@@ -75,6 +79,7 @@ class Problem {
 
 class Github {
   constructor(problem) {
+    this.submissionInProgress = false;
     this.problem = problem;
   }
 
@@ -90,12 +95,17 @@ class Github {
   }
 
   async submitToGitHub(dataConfig, userConfig) {
+    if (this.submissionInProgress) return;
+    this.submissionInProgress = true;
+
     const fileExists = await this.checkFileExistence(dataConfig, userConfig);
     if (fileExists) {
       await this.updateFile(dataConfig, userConfig, fileExists);
     } else {
       await this.createFile(dataConfig, userConfig);
     }
+
+    this.submissionInProgress = false;
   }
 
   async checkFileExistence(dataConfig, userConfig) {
@@ -127,22 +137,48 @@ class Github {
       message: "Create file",
       content: btoa(this.getFormattedCode()),
     };
-    const readmeBody = {
-      message: "Adding readme file",
-      content: btoa(this.problem.description ? this.problem.description : ""),
-    };
 
-    const [codeResponse] = await Promise.all([
-      this.fetchWithAuth(codeUrl, "PUT", dataConfig, userConfig, codeBody),
-      this.fetchWithAuth(readmeUrl, "PUT", dataConfig, userConfig, readmeBody),
-    ]);
+    const result = await this.fetchWithAuth(
+      codeUrl,
+      "PUT",
+      dataConfig,
+      userConfig,
+      codeBody
+    );
+    const resultJson = await result.json();
 
-    if (codeResponse.status === 201) {
-      chrome.runtime.sendMessage({
-        type: "updateDifficultyStats",
-        difficulty: this.problem.difficulty,
-      });
+    if (result.status === 201) {
+      try {
+        const readmeBody = {
+          message: "Adding readme file",
+          content: this.utf8ToBase64(
+            this.problem.description ? this.problem.description : ""
+          ),
+          sha: resultJson.commit.sha,
+        };
+
+        await this.fetchWithAuth(
+          readmeUrl,
+          "PUT",
+          dataConfig,
+          userConfig,
+          readmeBody
+        );
+      } finally {
+        chrome.runtime.sendMessage({
+          type: "updateDifficultyStats",
+          difficulty: this.problem.difficulty,
+        });
+      }
     }
+  }
+
+  utf8ToBase64(str) {
+    return btoa(
+      encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) =>
+        String.fromCharCode("0x" + p1)
+      )
+    );
   }
 
   buildGitHubUrl(dataConfig, userConfig, file = "") {
@@ -166,28 +202,26 @@ class Github {
 
 class Route {
   constructor() {
+    this.utilsService = new Utils();
     this.problemSlug = this.extractProblemSlugFromUrl(location.pathname);
     this.observeUrlChanges();
   }
 
   observeUrlChanges() {
-    let lastUrl = location.href;
-    new MutationObserver(() => {
-      const url = location.href;
-      if (url !== lastUrl) {
-        lastUrl = url;
-        this.handleUrlChange();
-      }
-    }).observe(document, { subtree: true, childList: true });
-  }
+    const observer = new MutationObserver(() => {
+      if (
+        this.problemSlug !== this.extractProblemSlugFromUrl(location.pathname)
+      ) {
+        observer.disconnect();
+        this.problemSlug = this.extractProblemSlugFromUrl(location.pathname);
 
-  async handleUrlChange() {
-    if (
-      this.problemSlug !== this.extractProblemSlugFromUrl(location.pathname)
-    ) {
-      tracker = new LeetcodeTracker();
-      tracker.init();
-    }
+        setTimeout(() => {
+          tracker.init();
+        }, 1000);
+      }
+    });
+
+    observer.observe(document.body, { subtree: true, childList: true });
   }
 
   extractProblemSlugFromUrl(pathname) {
@@ -196,20 +230,8 @@ class Route {
   }
 }
 
-class LeetcodeTracker {
-  constructor() {
-    this.problem = new Problem();
-    this.github = new Github(this.problem);
-    this.route = new Route();
-  }
-
-  async init() {
-    await this.waitForElement(
-      'button[data-e2e-locator="console-submit-button"]:not([data-state="closed"])'
-    );
-    this.problem.updateFromDOM();
-    this.setupSubmitButton();
-  }
+class Utils {
+  constructor() {}
 
   async waitForElement(selector) {
     return new Promise((resolve) => {
@@ -230,6 +252,29 @@ class LeetcodeTracker {
       });
     });
   }
+}
+
+class LeetcodeTracker {
+  constructor() {
+    this.start();
+  }
+
+  start() {
+    this.utilsService = new Utils();
+    this.problem = new Problem();
+    this.github = new Github(this.problem);
+    this.route = new Route();
+  }
+
+  async init() {
+    this.start();
+
+    await this.utilsService.waitForElement(
+      'button[data-e2e-locator="console-submit-button"]:not([data-state="closed"])'
+    );
+    this.problem.updateFromDOM();
+    this.setupSubmitButton();
+  }
 
   setupSubmitButton() {
     const submitButton = document.querySelector(
@@ -241,7 +286,9 @@ class LeetcodeTracker {
   }
 
   async handleSubmission() {
-    await this.waitForElement('span[data-e2e-locator="submission-result"]');
+    await this.utilsService.waitForElement(
+      'span[data-e2e-locator="submission-result"]'
+    );
     const accepted = document.querySelector(
       'span[data-e2e-locator="submission-result"]'
     );
