@@ -5,7 +5,7 @@
 </h1>
 
 <div align="center">
-  <a href="https://chromewebstore.google.com/detail/leetcode-tracker/bnhnpmglielpbmnnhhbcfnljhijfppbm" rel="Download leetcode tracker extension"><img src="https://embedsignage.com/wp-content/uploads/2016/04/embed-signage-chromeos-web-store-button.png" alt="Leetcode tracker extension chrome store" width="300" /></a>
+  <a href="https://chromewebstore.google.com/detail/mojbjmadgddjbhokmpgnceiplpdkaodj" rel="Download leetcode tracker extension"><img src="https://embedsignage.com/wp-content/uploads/2016/04/embed-signage-chromeos-web-store-button.png" alt="Leetcode tracker extension chrome store" width="300" /></a>
 </div>
 
 ## What is Leetcode Tracker?
