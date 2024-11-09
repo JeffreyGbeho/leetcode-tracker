@@ -89,7 +89,10 @@ class Github {
   }
 
   getFormattedCode() {
-    const language = JSON.parse(window.localStorage.getItem("global_lang"));
+    const language =
+      JSON.parse(window.localStorage.getItem("global_lang")) === "python3"
+        ? "python"
+        : JSON.parse(window.localStorage.getItem("global_lang"));
     const codeElement = document.querySelector(`code.language-${language}`);
     return codeElement ? codeElement.textContent : "";
   }
