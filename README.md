@@ -33,7 +33,7 @@ Moreover, pushing code manually to GitHub from Leetcode is very time consuming. 
 
 <p>
 The coding interview is arguably the most important part of your interview process, given you get the interview first. As someone who's received multiple internship offers from Fortune 100 companies, getting the interview in the first place is not easy!<br>
-And that's what Leetcode Tracker is supposed to do: indirectly improving your coding skills while improving your portfolio to ACE that interview at <em>insert_name_here</em>! <br>
+And that's what Leetcode Tracker is supposed to do: indirectly improving your coding skills while improving your portfolio to ACE that interview at big tech companies! <br>
 There were many Chrome extensions to automatically synchronize LeetCode code with GitHub, but none of them was up-to-date to work with the new LeetCode interface.
 </p>
 
