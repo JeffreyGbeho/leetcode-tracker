@@ -16,7 +16,7 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "permissions": ["tabs", "unlimitedStorage", "storage"],
+  "permissions": ["unlimitedStorage", "storage"],
   "content_scripts": [
     {
       "matches": ["https://leetcode.com/*", "https://github.com/*"],
