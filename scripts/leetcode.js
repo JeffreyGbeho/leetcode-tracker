@@ -1,23 +1,29 @@
-const languageExtensions = {
-  cpp: ".cpp",
-  java: ".java",
-  python: ".py",
-  python3: ".py",
-  c: ".c",
-  csharp: ".cs",
-  javascript: ".js",
-  typescript: ".ts",
-  php: ".php",
-  swift: ".swift",
-  kotlin: ".kt",
-  dart: ".dart",
-  golang: ".go",
-  ruby: ".rb",
-  scala: ".scala",
-  rust: ".rs",
-  racket: ".rkt",
-  erlang: ".erl",
-  elixir: ".ex",
+const baseLanguages = {
+  cpp: { langName: "cpp", extension: ".cpp" },
+  java: { langName: "java", extension: ".java" },
+  python: { langName: "python", extension: ".py" },
+  python3: { langName: "python", extension: ".py" },
+  c: { langName: "c", extension: ".c" },
+  csharp: { langName: "csharp", extension: ".cs" },
+  javascript: { langName: "javascript", extension: ".js" },
+  typescript: { langName: "typescript", extension: ".ts" },
+  php: { langName: "php", extension: ".php" },
+  swift: { langName: "swift", extension: ".swift" },
+  kotlin: { langName: "kotlin", extension: ".kt" },
+  dart: { langName: "dart", extension: ".dart" },
+  golang: { langName: "golang", extension: ".go" },
+  ruby: { langName: "ruby", extension: ".rb" },
+  scala: { langName: "scala", extension: ".scala" },
+  rust: { langName: "rust", extension: ".rs" },
+  racket: { langName: "racket", extension: ".rkt" },
+  erlang: { langName: "erlang", extension: ".erl" },
+  elixir: { langName: "elixir", extension: ".ex" },
+};
+
+const alternativeNames = {
+  "c++": "cpp",
+  "c#": "csharp",
+  go: "golang",
 };
 
 class Problem {
@@ -81,18 +87,27 @@ class Github {
   constructor(problem) {
     this.submissionInProgress = false;
     this.problem = problem;
+    this.utilsService = new Utils();
   }
 
   getLanguageExtension() {
-    const language = JSON.parse(window.localStorage.getItem("global_lang"));
-    return languageExtensions[language] || null;
+    const language =
+      JSON.parse(window.localStorage.getItem("global_lang")) ||
+      document
+        .querySelector("#headlessui-popover-button-\\:r1s\\: button")
+        ?.textContent;
+
+    return this.utilsService.getLanguageInfo(language).extension;
   }
 
   getFormattedCode() {
-    const language =
-      JSON.parse(window.localStorage.getItem("global_lang")) === "python3"
-        ? "python"
-        : JSON.parse(window.localStorage.getItem("global_lang"));
+    const languageKey =
+      JSON.parse(window.localStorage.getItem("global_lang")) ||
+      document
+        .querySelector("#headlessui-popover-button-\\:r1s\\: button")
+        ?.textContent;
+    const language = this.utilsService.getLanguageInfo(languageKey).langName;
+
     const codeElement = document.querySelector(`code.language-${language}`);
     return codeElement ? codeElement.textContent : "";
   }
@@ -235,6 +250,12 @@ class Route {
 
 class Utils {
   constructor() {}
+
+  getLanguageInfo(key) {
+    const normalizedKey = key.toLowerCase();
+    const mappedKey = alternativeNames[normalizedKey] || normalizedKey;
+    return baseLanguages[mappedKey] || null;
+  }
 
   async waitForElement(selector) {
     return new Promise((resolve) => {
