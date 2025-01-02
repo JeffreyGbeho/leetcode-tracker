@@ -93,8 +93,7 @@ class Github {
   getLanguageExtension() {
     const language =
       JSON.parse(window.localStorage.getItem("global_lang")) ||
-      document
-        .querySelector("#headlessui-popover-button-\\:r1s\\: button")
+      document.querySelector("#headlessui-popover-button-\\:r1s\\: button")
         ?.textContent;
 
     return this.utilsService.getLanguageInfo(language).extension;
@@ -103,8 +102,7 @@ class Github {
   getFormattedCode() {
     const languageKey =
       JSON.parse(window.localStorage.getItem("global_lang")) ||
-      document
-        .querySelector("#headlessui-popover-button-\\:r1s\\: button")
+      document.querySelector("#headlessui-popover-button-\\:r1s\\: button")
         ?.textContent;
     const language = this.utilsService.getLanguageInfo(languageKey).langName;
 
@@ -118,12 +116,23 @@ class Github {
 
     const fileExists = await this.checkFileExistence(dataConfig, userConfig);
     if (fileExists) {
-      await this.updateFile(dataConfig, userConfig, fileExists);
+      const currentContent = atob(fileExists.content);
+      const newContent = this.getFormattedCode();
+
+      if (await this.contentsDiffer(currentContent, newContent)) {
+        await this.updateFile(dataConfig, userConfig, fileExists);
+      }
     } else {
       await this.createFile(dataConfig, userConfig);
     }
 
     this.submissionInProgress = false;
+  }
+
+  async contentsDiffer(currentContent, newContent) {
+    const normalize = (content) =>
+      content.trim().replace(/\r\n/g, "\n").replace(/\s+/g, " ");
+    return normalize(currentContent) !== normalize(newContent);
   }
 
   async checkFileExistence(dataConfig, userConfig) {
@@ -305,6 +314,13 @@ class LeetcodeTracker {
       'button[data-e2e-locator="console-submit-button"]'
     );
     submitButton.addEventListener("click", () => {
+      const existingResult = document.querySelector(
+        'span[data-e2e-locator="submission-result"]'
+      );
+      if (existingResult) {
+        existingResult.remove();
+      }
+
       this.handleSubmission();
     });
   }
