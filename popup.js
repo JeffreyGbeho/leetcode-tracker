@@ -22,6 +22,7 @@ const DOM = {
 class PopupManager {
   constructor() {
     this.initializeEventListeners();
+    this.initializeStats();
   }
 
   initializeEventListeners() {
@@ -34,6 +35,12 @@ class PopupManager {
     DOM.unlinkButton.addEventListener("click", this.unlinkRepo.bind(this));
     DOM.logoutButton.addEventListener("click", this.logout.bind(this));
     DOM.changeAccountButton.addEventListener("click", this.logout.bind(this));
+
+    chrome.runtime.onMessage.addListener((message) => {
+      if (message.type === "statsUpdate") {
+        this.updateStatsDisplay(message.data);
+      }
+    });
   }
 
   setupLinks() {
@@ -59,7 +66,6 @@ class PopupManager {
     }
 
     this.updateUserInfos();
-    this.updateStats();
   }
 
   async logout() {
@@ -91,23 +97,35 @@ class PopupManager {
     }
   }
 
-  async updateStats() {
-    const stats = await this.getStatsFromBackground();
-
-    if (stats) {
-      Object.keys(DOM.stats).forEach((key) => {
-        if (DOM.stats[key]) {
-          DOM.stats[key].textContent = stats[key] || 0;
-        }
-      });
+  async initializeStats() {
+    try {
+      const initialStats = await this.getInitialStats();
+      if (initialStats) {
+        this.updateStatsDisplay(initialStats);
+      }
+    } catch (error) {
+      console.error("Error getting initial stats:", error);
     }
   }
 
-  async getStatsFromBackground() {
+  getInitialStats() {
     return new Promise((resolve) => {
-      chrome.runtime.sendMessage({ type: "getStats" }, (response) => {
-        resolve(response);
-      });
+      chrome.runtime.sendMessage(
+        { type: "requestInitialStats" },
+        (response) => {
+          resolve(response);
+        }
+      );
+    });
+  }
+
+  updateStatsDisplay(stats) {
+    if (!stats) return;
+
+    Object.keys(DOM.stats).forEach((key) => {
+      if (DOM.stats[key]) {
+        DOM.stats[key].textContent = stats[key] || 0;
+      }
     });
   }
 
