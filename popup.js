@@ -92,14 +92,23 @@ class PopupManager {
   }
 
   async updateStats() {
-    const { leetcode_tracker_stats } = await chrome.storage.local.get(
-      "leetcode_tracker_stats"
-    );
-    if (leetcode_tracker_stats) {
+    const stats = await this.getStatsFromBackground();
+
+    if (stats) {
       Object.keys(DOM.stats).forEach((key) => {
-        DOM.stats[key].textContent = leetcode_tracker_stats[key] || 0;
+        if (DOM.stats[key]) {
+          DOM.stats[key].textContent = stats[key] || 0;
+        }
       });
     }
+  }
+
+  async getStatsFromBackground() {
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage({ type: "getStats" }, (response) => {
+        resolve(response);
+      });
+    });
   }
 
   async handleAuthentication() {

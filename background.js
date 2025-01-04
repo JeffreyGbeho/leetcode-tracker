@@ -1,5 +1,11 @@
 import { ENV } from "./environment.js";
 
+let leetcodeCounterDifficulty = {
+  easy: 0,
+  medium: 0,
+  hard: 0,
+};
+
 /**
  * Save github's user infors in the local storage
  * @param {*} request // Data send by the content script.
@@ -18,18 +24,7 @@ function saveUserInfos(request) {
  * @param {*} request // Data send by the content script.
  */
 function updateStats(request) {
-  chrome.storage.local.get(["leetcode_tracker_stats"], (result) => {
-    const stats = result.leetcode_tracker_stats
-      ? result.leetcode_tracker_stats
-      : {};
-
-    stats[request.difficulty] =
-      stats[request.difficulty] > 0 ? stats[request.difficulty] + 1 : 1;
-    stats.problemsSolved =
-      stats.problemsSolved > 0 ? stats.problemsSolved + 1 : 1;
-
-    chrome.storage.local.set({ leetcode_tracker_stats: stats }, () => {});
-  });
+  leetcodeCounterDifficulty[request.difficulty.toLowerCase()] += 1;
 }
 
 /**
@@ -42,5 +37,96 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     saveUserInfos(request);
   } else if (request.type === "updateDifficultyStats") {
     updateStats(request);
+  } else if (request.type === "getStats") {
+    sendResponse(leetcodeCounterDifficulty);
   }
 });
+
+/**
+ * COUNTER
+ */
+
+async function initCounter() {
+  const githubProblems = await getAllLeetCodeProblems();
+
+  const leetcodeProblemSlugs = githubProblems
+    .filter((problem) => /^\d+-[A-Z]/.test(problem.name))
+    .map((problem) => ({
+      originalName: problem.name,
+      questionId: convertGithubToLeetCodeSlug(problem.name),
+    }));
+
+  leetcodeProblemSlugs.forEach(async (problem) => {
+    const difficulty = await fetchProblemDifficulty(problem.questionId);
+    leetcodeCounterDifficulty[difficulty.toLowerCase()] += 1;
+  });
+}
+
+/**
+ * Get all leetcode problems from a github repository
+ */
+async function getAllLeetCodeProblems() {
+  try {
+    const url = await buildBasicGitubUrl();
+
+    const response = await fetch(url);
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching repository contents:", error);
+    return [];
+  }
+}
+
+async function buildBasicGitubUrl() {
+  const result = await chrome.storage.local.get([
+    "leetcode_tracker_username",
+    "leetcode_tracker_repo",
+  ]);
+
+  return `${ENV.REPOSITORY_URL}${result.leetcode_tracker_username}/${result.leetcode_tracker_repo}/contents/`;
+}
+
+function convertGithubToLeetCodeSlug(githubFileName) {
+  let [number, ...nameParts] = githubFileName.split("-");
+
+  return number;
+}
+
+async function fetchProblemDifficulty(problemId) {
+  const graphqlQuery = {
+    query: `
+      query allQuestions {
+        allQuestions {
+          title
+          titleSlug
+          questionId
+          difficulty
+        }
+      }
+    `,
+  };
+
+  try {
+    const response = await fetch("https://leetcode.com/graphql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(graphqlQuery),
+    });
+
+    const data = await response.json();
+
+    const question = data.data.allQuestions.find(
+      (question) => question.questionId === problemId
+    );
+
+    return question.difficulty;
+  } catch (error) {
+    console.error("Error fetching problems:", error);
+    return null;
+  }
+}
+
+initCounter();
