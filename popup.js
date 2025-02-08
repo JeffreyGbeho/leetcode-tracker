@@ -12,6 +12,7 @@ const DOM = {
   githubUsername: document.getElementById("github-username"),
   logoutButton: document.getElementById("logout-button"),
   changeAccountButton: document.getElementById("change-account-button"),
+  checkboxCodeSubmitSetting: document.getElementById("submit-code-checkbox"),
   stats: {
     easy: document.getElementById("easy"),
     medium: document.getElementById("medium"),
@@ -23,6 +24,23 @@ class PopupManager {
   constructor() {
     this.initializeEventListeners();
     this.initializeStats();
+    this.initializeCodeSubmitSetting();
+  }
+
+  initializeCodeSubmitSetting() {
+    chrome.storage.local.get("leetcode_tracker_code_submit", (result) => {
+      const codeSubmit = result.leetcode_tracker_code_submit;
+      DOM.checkboxCodeSubmitSetting.checked = codeSubmit;
+    });
+  }
+
+  toggleCodeSubmitSetting() {
+    chrome.storage.local.get("leetcode_tracker_code_submit", (result) => {
+      const codeSubmit = result.leetcode_tracker_code_submit;
+      chrome.storage.local.set({
+        leetcode_tracker_code_submit: !codeSubmit,
+      });
+    });
   }
 
   initializeEventListeners() {
@@ -35,6 +53,10 @@ class PopupManager {
     DOM.unlinkButton.addEventListener("click", this.unlinkRepo.bind(this));
     DOM.logoutButton.addEventListener("click", this.logout.bind(this));
     DOM.changeAccountButton.addEventListener("click", this.logout.bind(this));
+    DOM.checkboxCodeSubmitSetting.addEventListener(
+      "click",
+      this.toggleCodeSubmitSetting.bind(this)
+    );
 
     chrome.runtime.onMessage.addListener((message) => {
       if (message.type === "statsUpdate") {

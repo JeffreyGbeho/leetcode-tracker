@@ -100,7 +100,6 @@ class GitHubService {
           questionId: this.convertGithubToLeetCodeSlug(problem.name),
         }));
     } catch (error) {
-      console.error("Error fetching repository contents:", error);
       return [];
     }
   }
@@ -134,7 +133,6 @@ class LeetCodeService {
       const data = await response.json();
       return data.data.allQuestions;
     } catch (error) {
-      console.error("Error fetching difficulties:", error);
       return [];
     }
   }
@@ -198,13 +196,24 @@ class LeetCodeTrackerController {
 
       this.stateManager.updateStats(difficulties);
     } catch (error) {
-      console.error("Error initializing counter:", error);
       this.stateManager.state.loading = false;
       this.stateManager.state.isCountingComplete = true;
       this.stateManager.broadcastState();
     }
   }
 }
+
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === "install" || details.reason === "update") {
+    chrome.storage.local.get("leetcode_tracker_code_submit", (result) => {
+      if (result.leetcode_tracker_code_submit === undefined) {
+        chrome.storage.local.set({
+          leetcode_tracker_code_submit: true,
+        });
+      }
+    });
+  }
+});
 
 // Initialisation
 const controller = new LeetCodeTrackerController();

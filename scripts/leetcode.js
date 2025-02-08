@@ -118,10 +118,21 @@ class Github {
     if (fileExists) {
       const currentContent = atob(fileExists.content);
       const newContent = this.getFormattedCode();
+      const result = await chrome.storage.local.get(
+        "leetcode_tracker_code_submit"
+      );
+      const skipDuplicates = result.leetcode_tracker_code_submit;
+      const contentIsSame = !(await this.contentsDiffer(
+        currentContent,
+        newContent
+      ));
 
-      if (await this.contentsDiffer(currentContent, newContent)) {
-        await this.updateFile(dataConfig, userConfig, fileExists);
+      // Skip update if setting is enabled and content hasn't changed
+      if (skipDuplicates && contentIsSame) {
+        return;
       }
+
+      await this.updateFile(dataConfig, userConfig, fileExists);
     } else {
       await this.createFile(dataConfig, userConfig);
     }
@@ -148,9 +159,18 @@ class Github {
 
   async updateFile(dataConfig, userConfig, existingFile) {
     const url = this.buildGitHubUrl(dataConfig, userConfig);
+    const currentDate = new Date().toLocaleString();
+    const result = await chrome.storage.local.get(
+      "leetcode_tracker_code_submit"
+    );
+    const skipDuplicates = result.leetcode_tracker_code_submit;
+    const codeWithTimestamp = skipDuplicates
+      ? this.getFormattedCode()
+      : `// Last updated: ${currentDate}\n${this.getFormattedCode()}`;
+
     const body = {
-      message: `Update file ${new Date().toLocaleString()}`,
-      content: btoa(this.getFormattedCode()),
+      message: `File updated at ${currentDate}`,
+      content: btoa(codeWithTimestamp),
       sha: existingFile.sha,
     };
     await this.fetchWithAuth(url, "PUT", dataConfig, userConfig, body);
