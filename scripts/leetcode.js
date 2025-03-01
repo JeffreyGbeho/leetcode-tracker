@@ -106,8 +106,11 @@ class Github {
         ?.textContent;
     const language = this.utilsService.getLanguageInfo(languageKey).langName;
 
-    const codeElement = document.querySelector(`code.language-${language}`);
-    return codeElement ? codeElement.textContent : "";
+    const codeElements = document.querySelectorAll(`code.language-${language}`);
+
+    return codeElements
+      ? codeElements[codeElements.length - 1].textContent
+      : "";
   }
 
   async submitToGitHub(dataConfig, userConfig) {
