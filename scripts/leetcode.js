@@ -12,10 +12,10 @@ export default class LeetcodeTracker {
   }
 
   async init() {
+    this.problem.loadProblemFromDOM();
     await DOMUtils.waitForElement(
       `${domElements.submitButton}:not([data-state="closed"])`
     );
-    this.problem.loadProblemFromDOM();
     this.setupSubmitButton();
   }
 
