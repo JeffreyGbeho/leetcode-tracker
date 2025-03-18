@@ -22,8 +22,8 @@ const DOM = {
 
 class PopupManager {
   constructor() {
-    this.initializeEventListeners();
     this.initializeStats();
+    this.initializeEventListeners();
     this.initializeCodeSubmitSetting();
   }
 
@@ -121,6 +121,8 @@ class PopupManager {
 
   async initializeStats() {
     try {
+      this.startLoading();
+
       const initialStats = await this.getInitialStats();
       if (initialStats) {
         this.updateStatsDisplay(initialStats);
@@ -144,11 +146,23 @@ class PopupManager {
   updateStatsDisplay(stats) {
     if (!stats) return;
 
+    this.stopLoading();
+
     Object.keys(DOM.stats).forEach((key) => {
       if (DOM.stats[key]) {
         DOM.stats[key].textContent = stats[key] || 0;
       }
     });
+  }
+
+  startLoading() {
+    document.getElementById("loading-container").style.display = "flex";
+    document.getElementById("stats").classList.add("loading");
+  }
+
+  stopLoading() {
+    document.getElementById("loading-container").style.display = "none";
+    document.getElementById("stats").classList.remove("loading");
   }
 
   async handleAuthentication() {

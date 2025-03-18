@@ -59,7 +59,6 @@ class LeetCodeStateManager {
     this.state.isCountingComplete = false;
     this.state.lastUpdate = null;
     this.state.loading = true;
-    this.broadcastState();
   }
 
   broadcastState() {
@@ -163,7 +162,11 @@ class LeetCodeTrackerController {
           this.saveUserInfos(request);
           break;
         case "requestInitialStats":
-          sendResponse(this.stateManager.getStats());
+          if (this.stateManager.state.loading) {
+            sendResponse(null);
+          } else {
+            sendResponse(this.stateManager.getStats());
+          }
           break;
       }
       return true;
