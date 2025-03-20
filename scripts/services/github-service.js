@@ -16,6 +16,11 @@ export default class GithubService {
         "leetcode_tracker_token",
       ]);
       this.dataConfig = await this.configurationService.getDataConfig();
+      const result = await chrome.storage.local.get(
+        "leetcode_tracker_sync_multiple_submission"
+      );
+      this.syncMultipleSubmissionsSettingEnabled =
+        result.leetcode_tracker_sync_multiple_submission || false;
     } catch (error) {
       console.error("Error initializing GithubService:", error);
     }
@@ -34,7 +39,8 @@ export default class GithubService {
     this.submissionInProgress = true;
 
     const fileExists = await this.checkFileExistence();
-    if (fileExists) {
+
+    if (fileExists && !this.syncMultipleSubmissionsSettingEnabled) {
       const currentContent = atob(fileExists.content);
       const newContent = this.getFormattedCode();
       const result = await this.configurationService.getChromeStorageConfig([
@@ -62,17 +68,10 @@ export default class GithubService {
   async updateFile(existingFile) {
     const url = this.buildGitHubUrl();
     const currentDate = new Date().toLocaleString();
-    const result = await chrome.storage.local.get(
-      "leetcode_tracker_code_submit"
-    );
-    const skipDuplicates = result.leetcode_tracker_code_submit;
-    const codeWithTimestamp = skipDuplicates
-      ? this.getFormattedCode()
-      : `// Last updated: ${currentDate}\n${this.getFormattedCode()}`;
 
     const body = {
       message: `File updated at ${currentDate}`,
-      content: btoa(codeWithTimestamp),
+      content: btoa(this.getFormattedCode()),
       sha: existingFile.sha,
     };
     await this.fetchWithAuth(url, "PUT", body);
@@ -139,9 +138,12 @@ export default class GithubService {
     const language = LanguageUtils.getLanguageInfo(languageKey).langName;
 
     const codeElements = document.querySelectorAll(`code.language-${language}`);
+    const currentDate = new Date().toLocaleString();
 
     return codeElements
-      ? codeElements[codeElements.length - 1].textContent
+      ? `// Last updated: ${currentDate}\n${
+          codeElements[codeElements.length - 1].textContent
+        }`
       : "";
   }
 
@@ -154,9 +156,18 @@ export default class GithubService {
   }
 
   buildGitHubUrl(file = "") {
+    const lang = window.localStorage.getItem("global_lang").replaceAll('"', "");
+    const dateTime = this.syncMultipleSubmissionsSettingEnabled
+      ? `_${this.getLocalTimeString()}`
+      : "";
+
     const fileName =
-      file || `${this.problem.slug}${this.getLanguageExtension()}`;
-    return `${this.dataConfig.REPOSITORY_URL}${this.userConfig.leetcode_tracker_username}/${this.userConfig.leetcode_tracker_repo}/contents/${this.problem.slug}/${fileName}`;
+      file || `${this.problem.slug}${dateTime}${this.getLanguageExtension()}`;
+    const versionPath = this.syncMultipleSubmissionsSettingEnabled
+      ? `/version/${lang}`
+      : "";
+
+    return `${this.dataConfig.REPOSITORY_URL}${this.userConfig.leetcode_tracker_username}/${this.userConfig.leetcode_tracker_repo}/contents/${this.problem.slug}${versionPath}/${fileName}`;
   }
 
   async fetchWithAuth(url, method, body = null) {
@@ -169,5 +180,20 @@ export default class GithubService {
     };
     if (body) options.body = JSON.stringify(body);
     return fetch(url, options);
+  }
+
+  getLocalTimeString() {
+    const now = new Date();
+
+    // Format YYYYMMDD_HHMMSS
+    return (
+      now.getFullYear() +
+      ("0" + (now.getMonth() + 1)).slice(-2) +
+      ("0" + now.getDate()).slice(-2) +
+      "_" +
+      ("0" + now.getHours()).slice(-2) +
+      ("0" + now.getMinutes()).slice(-2) +
+      ("0" + now.getSeconds()).slice(-2)
+    );
   }
 }

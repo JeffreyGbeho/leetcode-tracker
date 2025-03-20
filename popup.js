@@ -13,6 +13,9 @@ const DOM = {
   logoutButton: document.getElementById("logout-button"),
   changeAccountButton: document.getElementById("change-account-button"),
   checkboxCodeSubmitSetting: document.getElementById("submit-code-checkbox"),
+  checkboxSyncMultipleSubmissions: document.getElementById(
+    "multiple-submission-checkbox"
+  ),
   stats: {
     easy: document.getElementById("easy"),
     medium: document.getElementById("medium"),
@@ -24,14 +27,22 @@ class PopupManager {
   constructor() {
     this.initializeStats();
     this.initializeEventListeners();
-    this.initializeCodeSubmitSetting();
+    this.initializeSetting();
   }
 
-  initializeCodeSubmitSetting() {
+  initializeSetting() {
     chrome.storage.local.get("leetcode_tracker_code_submit", (result) => {
       const codeSubmit = result.leetcode_tracker_code_submit;
       DOM.checkboxCodeSubmitSetting.checked = codeSubmit;
     });
+
+    chrome.storage.local.get(
+      "leetcode_tracker_sync_multiple_submission",
+      (result) => {
+        const isSync = result.leetcode_tracker_sync_multiple_submission;
+        DOM.checkboxSyncMultipleSubmissions.checked = isSync;
+      }
+    );
   }
 
   toggleCodeSubmitSetting() {
@@ -40,7 +51,35 @@ class PopupManager {
       chrome.storage.local.set({
         leetcode_tracker_code_submit: !codeSubmit,
       });
+
+      if (!codeSubmit) {
+        chrome.storage.local.set({
+          leetcode_tracker_sync_multiple_submission: false,
+        });
+      }
+
+      this.initializeSetting();
     });
+  }
+
+  toggleSyncMultipleSubmissionSetting() {
+    chrome.storage.local.get(
+      "leetcode_tracker_sync_multiple_submission",
+      (result) => {
+        const isSync = result.leetcode_tracker_sync_multiple_submission;
+        chrome.storage.local.set({
+          leetcode_tracker_sync_multiple_submission: !isSync,
+        });
+
+        if (!isSync) {
+          chrome.storage.local.set({
+            leetcode_tracker_code_submit: false,
+          });
+        }
+
+        this.initializeSetting();
+      }
+    );
   }
 
   initializeEventListeners() {
@@ -56,6 +95,10 @@ class PopupManager {
     DOM.checkboxCodeSubmitSetting.addEventListener(
       "click",
       this.toggleCodeSubmitSetting.bind(this)
+    );
+    DOM.checkboxSyncMultipleSubmissions.addEventListener(
+      "click",
+      this.toggleSyncMultipleSubmissionSetting.bind(this)
     );
 
     chrome.runtime.onMessage.addListener((message) => {

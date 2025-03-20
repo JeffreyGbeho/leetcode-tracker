@@ -215,6 +215,17 @@ chrome.runtime.onInstalled.addListener((details) => {
         });
       }
     });
+
+    chrome.storage.local.get(
+      "leetcode_tracker_sync_multiple_submission",
+      (result) => {
+        if (result.leetcode_tracker_sync_multiple_submission === undefined) {
+          chrome.storage.local.set({
+            leetcode_tracker_sync_multiple_submission: false,
+          });
+        }
+      }
+    );
   }
 });
 
