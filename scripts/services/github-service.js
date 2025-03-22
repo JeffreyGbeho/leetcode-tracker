@@ -5,6 +5,7 @@ export default class GithubService {
   constructor(problem) {
     this.submissionInProgress = false;
     this.problem = problem;
+    this.comment = "";
     this.configurationService = new ConfigurationService();
   }
 
@@ -26,8 +27,9 @@ export default class GithubService {
     }
   }
 
-  async submitToGitHub() {
+  async submitToGitHub(comment = "") {
     await this.init();
+    this.comment = comment;
 
     if (
       this.submissionInProgress ||
@@ -136,15 +138,120 @@ export default class GithubService {
       document.querySelector("#headlessui-popover-button-\\:r1s\\: button")
         ?.textContent;
     const language = LanguageUtils.getLanguageInfo(languageKey).langName;
+    const extension = LanguageUtils.getLanguageInfo(languageKey).extension;
 
     const codeElements = document.querySelectorAll(`code.language-${language}`);
     const currentDate = new Date().toLocaleString();
 
-    return codeElements
-      ? `// Last updated: ${currentDate}\n${
-          codeElements[codeElements.length - 1].textContent
-        }`
-      : "";
+    // Si aucun élément de code n'est trouvé, retourner une chaîne vide
+    if (!codeElements || codeElements.length === 0) {
+      return "";
+    }
+
+    // Obtenir le format de commentaire approprié pour le langage
+    const commentFormat = this.getCommentFormat(extension);
+
+    // Créer l'en-tête avec la date
+    let header = `${commentFormat.line} Last updated: ${currentDate}\n`;
+
+    // Ajouter le commentaire s'il existe
+    if (this.comment && this.comment.trim()) {
+      // Pour les commentaires multilignes, utiliser le format approprié
+      if (this.comment.includes("\n")) {
+        header += `${commentFormat.start}\n`;
+
+        // Formater chaque ligne du commentaire
+        this.comment.split("\n").forEach((line) => {
+          header += `${commentFormat.linePrefix}${line}\n`;
+        });
+
+        header += `${commentFormat.end}\n\n`;
+      } else {
+        // Pour les commentaires courts d'une seule ligne
+        header += `${commentFormat.line} ${this.comment}\n`;
+      }
+    }
+
+    // Ajouter le code
+    return header + codeElements[codeElements.length - 1].textContent;
+  }
+
+  getCommentFormat(extension) {
+    switch (extension) {
+      case ".py":
+        return {
+          line: "#",
+          start: "'''",
+          end: "'''",
+          linePrefix: "",
+        };
+      case ".rb":
+        return {
+          line: "#",
+          start: "=begin",
+          end: "=end",
+          linePrefix: "",
+        };
+      case ".php":
+        return {
+          line: "//",
+          start: "/*",
+          end: "*/",
+          linePrefix: " * ",
+        };
+      case ".js":
+      case ".ts":
+      case ".kt":
+      case ".java":
+      case ".c":
+      case ".cpp":
+      case ".cs":
+      case ".swift":
+      case ".scala":
+      case ".dart":
+      case ".go":
+        return {
+          line: "//",
+          start: "/*",
+          end: "*/",
+          linePrefix: " * ",
+        };
+      case ".rs":
+        return {
+          line: "//",
+          start: "/*",
+          end: "*/",
+          linePrefix: " * ",
+        };
+      case ".ex":
+        return {
+          line: "#",
+          start: '@doc """',
+          end: '"""',
+          linePrefix: "",
+        };
+      case ".erl":
+        return {
+          line: "%",
+          start: "%% ---",
+          end: "%% ---",
+          linePrefix: "%% ",
+        };
+      case ".rkt":
+        return {
+          line: ";",
+          start: "#|",
+          end: "|#",
+          linePrefix: " ",
+        };
+      default:
+        return {
+          line: "//",
+          start: "/*",
+          end: "*/",
+          linePrefix: " * ",
+        };
+    }
   }
 
   utf8ToBase64(str) {

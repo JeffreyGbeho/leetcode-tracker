@@ -16,6 +16,9 @@ const DOM = {
   checkboxSyncMultipleSubmissions: document.getElementById(
     "multiple-submission-checkbox"
   ),
+  checkboxCommentSubmission: document.getElementById(
+    "comment-submission-checkbox"
+  ),
   stats: {
     easy: document.getElementById("easy"),
     medium: document.getElementById("medium"),
@@ -43,6 +46,14 @@ class PopupManager {
         DOM.checkboxSyncMultipleSubmissions.checked = isSync;
       }
     );
+
+    chrome.storage.local.get(
+      "leetcode_tracker_comment_submission",
+      (result) => {
+        const isCommentEnabled = result.leetcode_tracker_comment_submission;
+        DOM.checkboxCommentSubmission.checked = isCommentEnabled;
+      }
+    );
   }
 
   toggleCodeSubmitSetting() {
@@ -55,6 +66,7 @@ class PopupManager {
       if (!codeSubmit) {
         chrome.storage.local.set({
           leetcode_tracker_sync_multiple_submission: false,
+          leetcode_tracker_comment_submission: false,
         });
       }
 
@@ -74,6 +86,31 @@ class PopupManager {
         if (!isSync) {
           chrome.storage.local.set({
             leetcode_tracker_code_submit: false,
+          });
+        } else {
+          chrome.storage.local.set({
+            leetcode_tracker_comment_submission: false,
+          });
+        }
+
+        this.initializeSetting();
+      }
+    );
+  }
+
+  toggleCommentSubmissionSetting() {
+    chrome.storage.local.get(
+      "leetcode_tracker_comment_submission",
+      (result) => {
+        const isCommentEnabled = result.leetcode_tracker_comment_submission;
+        chrome.storage.local.set({
+          leetcode_tracker_comment_submission: !isCommentEnabled,
+        });
+
+        if (!isCommentEnabled) {
+          chrome.storage.local.set({
+            leetcode_tracker_code_submit: false,
+            leetcode_tracker_sync_multiple_submission: true,
           });
         }
 
@@ -99,6 +136,10 @@ class PopupManager {
     DOM.checkboxSyncMultipleSubmissions.addEventListener(
       "click",
       this.toggleSyncMultipleSubmissionSetting.bind(this)
+    );
+    DOM.checkboxCommentSubmission.addEventListener(
+      "click",
+      this.toggleCommentSubmissionSetting.bind(this)
     );
 
     chrome.runtime.onMessage.addListener((message) => {
