@@ -21,7 +21,13 @@ export default class LeetcodeTracker {
 
   setupSubmitButton() {
     const submitButton = document.querySelector(domElements.submitButton);
-    submitButton.addEventListener("click", () => {
+
+    if (this.clickHandlerAttached) {
+      submitButton.removeEventListener("click", this.submitClickHandler);
+      this.clickHandlerAttached = false;
+    }
+
+    this.submitClickHandler = () => {
       const existingResult = document.querySelector(
         domElements.submissionResult
       );
@@ -30,7 +36,10 @@ export default class LeetcodeTracker {
       }
 
       this.handleSubmission();
-    });
+    };
+
+    submitButton.addEventListener("click", this.submitClickHandler);
+    this.clickHandlerAttached = true;
   }
 
   async handleSubmission() {
