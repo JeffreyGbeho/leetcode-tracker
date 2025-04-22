@@ -127,6 +127,7 @@ export default class LeetcodeTracker {
         box-sizing: border-box;
         border: 1px solid #E0E0E0;
         border-radius: 8px;
+        color: rgb(0, 0, 0);
         font-family: inherit;
         font-size: 14px;
         margin-bottom: 20px;
