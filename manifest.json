@@ -1,7 +1,7 @@
 {
   "name": "LeetCode Tracker",
   "description": "Sync LeetCode's submissions with a GitHub repository",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "manifest_version": 3,
   "author": "Jeffrey Gbeho",
   "action": {
