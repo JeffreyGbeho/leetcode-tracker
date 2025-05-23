@@ -1,9 +1,13 @@
+import LanguageUtils from "/scripts/utils/language-utils.js";
+
 export default class Problem {
   constructor() {
     this.slug = "";
     this.difficulty = "";
     this.description = "";
     this.problemUrl = "";
+    this.code = "";
+    this.language = {};
   }
 
   loadProblemFromDOM() {
@@ -27,6 +31,23 @@ export default class Problem {
     }
 
     return "";
+  }
+
+  extractLanguageFromDOM() {
+    const language =
+      JSON.parse(window.localStorage.getItem("global_lang")) ||
+      document.querySelector("#headlessui-popover-button-\\:r1s\\: button")
+        ?.textContent;
+
+    this.language = LanguageUtils.getLanguageInfo(language);
+  }
+
+  extractCodeFromDOM() {
+    const codeElements = document.querySelectorAll(
+      `code.language-${this.language.langName}`
+    );
+
+    this.code = codeElements[codeElements.length - 1].textContent;
   }
 
   extractProblemInfos(url) {

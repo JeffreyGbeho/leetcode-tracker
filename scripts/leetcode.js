@@ -4,13 +4,31 @@ import DOMUtils from "/scripts/utils/dom-utils.js";
 import GithubService from "/scripts/services/github-service.js";
 import { domElements } from "/scripts/constants/dom-elements.js";
 
+/**
+ * Main controller class for the LeetCode Tracker extension.
+ * Orchestrates the interaction between LeetCode's interface and GitHub synchronization.
+ */
 export default class LeetcodeTracker {
+  /**
+   * Initialize the LeetCode Tracker with required services and route monitoring.
+   * Sets up problem model, GitHub service, and route change detection.
+   */
   constructor() {
     this.problem = new Problem();
+    this.githubService = new GithubService();
     this.route = new RouteService(() => this.init());
     this.init();
   }
 
+  /**
+   * Initialize or reinitialize the tracker for the current problem page.
+   * Loads problem data from DOM and sets up submission monitoring.
+   *
+   * Algorithm:
+   * 1. Extract problem metadata from current page DOM
+   * 2. Wait for submit button to be available and interactive
+   * 3. Attach click handler to monitor submission attempts
+   */
   async init() {
     this.problem.loadProblemFromDOM();
     await DOMUtils.waitForElement(
@@ -19,6 +37,16 @@ export default class LeetcodeTracker {
     this.setupSubmitButton();
   }
 
+  /**
+   * Set up event listener on the LeetCode submit button to monitor submissions.
+   * Ensures clean handler attachment by removing any existing listeners first.
+   *
+   * Algorithm:
+   * 1. Remove any previously attached click handlers to prevent duplicates
+   * 2. Create new click handler that clears old results and triggers submission handling
+   * 3. Attach the handler to the submit button element
+   * 4. Track handler attachment state to prevent memory leaks
+   */
   setupSubmitButton() {
     const submitButton = document.querySelector(domElements.submitButton);
 
@@ -42,6 +70,18 @@ export default class LeetcodeTracker {
     this.clickHandlerAttached = true;
   }
 
+  /**
+   * Handle the submission process after user clicks submit button.
+   * Waits for submission result and processes accepted solutions.
+   *
+   * Algorithm:
+   * 1. Wait for submission result element to appear in DOM
+   * 2. Check if submission was accepted (status === "Accepted")
+   * 3. Check user settings for comment functionality
+   * 4. Show comment popup if enabled, collect user input
+   * 5. Extract language and code information from current DOM state
+   * 6. Submit complete solution data to GitHub via GithubService
+   */
   async handleSubmission() {
     await DOMUtils.waitForElement(domElements.submissionResult);
     const accepted = document.querySelector(domElements.submissionResult);
@@ -53,14 +93,37 @@ export default class LeetcodeTracker {
         result.leetcode_tracker_comment_submission || false;
 
       const userComment = isCommentEnabled ? await this.showCommentPopup() : "";
-      const githubService = new GithubService(this.problem);
-      githubService.submitToGitHub(userComment);
+      this.problem.extractLanguageFromDOM();
+      this.problem.extractCodeFromDOM();
+      this.githubService.submitToGitHub(this.problem, userComment);
     }
   }
 
+  /**
+   * Display a modal popup for users to add comments about their solution.
+   * Provides a rich UI experience with proper styling and interaction handling.
+   *
+   * Algorithm:
+   * 1. Create modal overlay with dark background
+   * 2. Build popup content with header, instruction text, and textarea
+   * 3. Style components with inline CSS for consistency across sites
+   * 4. Add interactive buttons (Skip/Save) with hover effects
+   * 5. Handle user interactions: save comment, skip, or click outside to close
+   * 6. Clean up DOM elements and resolve promise with user input
+   *
+   * UI Components:
+   * - Modal overlay with semi-transparent background
+   * - Centered popup with professional styling
+   * - Branded header with LeetcodeTracker name
+   * - Instructional text explaining the purpose
+   * - Large textarea for multi-line comments
+   * - Action buttons with hover states and proper spacing
+   *
+   * @returns {Promise<string>} User's comment text or empty string if skipped
+   */
   showCommentPopup() {
     return new Promise((resolve) => {
-      // Créer l'élément de la popup
+      // Create modal overlay element
       const popup = document.createElement("div");
       popup.className = "leetcode-tracker-comment-popup";
       popup.style.cssText = `
@@ -76,7 +139,7 @@ export default class LeetcodeTracker {
         z-index: 10000;
       `;
 
-      // Contenu de la popup
+      // Create main popup content container
       const popupContent = document.createElement("div");
       popupContent.style.cssText = `
         background-color: white;
@@ -88,7 +151,7 @@ export default class LeetcodeTracker {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       `;
 
-      // En-tête avec logo/titre
+      // Create header section with branding
       const header = document.createElement("div");
       header.style.cssText = `
         display: flex;
@@ -107,7 +170,7 @@ export default class LeetcodeTracker {
 
       header.appendChild(title);
 
-      // Instruction
+      // Create instruction text
       const instruction = document.createElement("p");
       instruction.textContent =
         "Add notes about your solution approach, time complexity, etc.";
@@ -118,7 +181,7 @@ export default class LeetcodeTracker {
         line-height: 1.5;
       `;
 
-      // Zone de texte pour le commentaire
+      // Create comment input textarea
       const textarea = document.createElement("textarea");
       textarea.style.cssText = `
         width: 100%;
@@ -137,7 +200,7 @@ export default class LeetcodeTracker {
       textarea.placeholder =
         "Example: This solution uses a stack to keep track of...";
 
-      // Séparateur
+      // Create visual separator
       const separator = document.createElement("div");
       separator.style.cssText = `
         height: 1px;
@@ -145,7 +208,7 @@ export default class LeetcodeTracker {
         margin: 16px 0;
       `;
 
-      // Conteneur pour les boutons
+      // Create button container
       const buttonContainer = document.createElement("div");
       buttonContainer.style.cssText = `
         display: flex;
@@ -154,7 +217,7 @@ export default class LeetcodeTracker {
         margin-top: 16px;
       `;
 
-      // Bouton Skip
+      // Create Skip button
       const skipButton = document.createElement("button");
       skipButton.textContent = "Skip";
       skipButton.style.cssText = `
@@ -169,7 +232,7 @@ export default class LeetcodeTracker {
         transition: background-color 0.2s;
       `;
 
-      // Hover effect
+      // Add hover effects for Skip button
       skipButton.onmouseover = () => {
         skipButton.style.backgroundColor = "#F5F5F5";
       };
@@ -177,7 +240,7 @@ export default class LeetcodeTracker {
         skipButton.style.backgroundColor = "white";
       };
 
-      // Bouton Save
+      // Create Save button
       const saveButton = document.createElement("button");
       saveButton.textContent = "Save Comment";
       saveButton.style.cssText = `
@@ -192,7 +255,7 @@ export default class LeetcodeTracker {
         transition: opacity 0.2s;
       `;
 
-      // Hover effect
+      // Add hover effects for Save button
       saveButton.onmouseover = () => {
         saveButton.style.opacity = "0.9";
       };
@@ -200,7 +263,7 @@ export default class LeetcodeTracker {
         saveButton.style.opacity = "1";
       };
 
-      // Ajouter les éléments au DOM
+      // Assemble DOM structure
       buttonContainer.appendChild(skipButton);
       buttonContainer.appendChild(saveButton);
 
@@ -213,22 +276,23 @@ export default class LeetcodeTracker {
       popup.appendChild(popupContent);
       document.body.appendChild(popup);
 
-      // Focus sur la zone de texte
+      // Focus on textarea for immediate typing
       setTimeout(() => textarea.focus(), 100);
 
-      // Gestion des événements
+      // Handle Skip button click
       skipButton.addEventListener("click", () => {
         document.body.removeChild(popup);
-        resolve(""); // Résoudre avec une chaîne vide si l'utilisateur saute
+        resolve(""); // Resolve with empty string if user skips
       });
 
+      // Handle Save button click
       saveButton.addEventListener("click", () => {
         const comment = textarea.value.trim();
         document.body.removeChild(popup);
-        resolve(comment); // Résoudre avec le commentaire
+        resolve(comment); // Resolve with user's comment
       });
 
-      // Fermer la popup en cliquant en dehors
+      // Handle click outside popup to close
       popup.addEventListener("click", (e) => {
         if (e.target === popup) {
           document.body.removeChild(popup);

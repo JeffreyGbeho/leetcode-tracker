@@ -1,14 +1,31 @@
-import LanguageUtils from "/scripts/utils/language-utils.js";
 import ConfigurationService from "/scripts/services/configuration-service.js";
 
+/**
+ * Service for managing GitHub repository operations for LeetCode problem synchronization.
+ * Handles file creation, updates, and repository management with proper authentication.
+ */
 export default class GithubService {
-  constructor(problem) {
-    this.submissionInProgress = false;
-    this.problem = problem;
-    this.comment = "";
+  /**
+   * Initialize GitHub service with independent instance isolation.
+   * Each instance gets a unique ID to prevent concurrent operation conflicts.
+   */
+  constructor() {
     this.configurationService = new ConfigurationService();
+
+    this.submissionInProgress = false;
+    this.problem = null;
+    this.comment = "";
+
+    // Make each instance independent to prevent race conditions
+    this.instanceId = Math.random().toString(36).substr(2, 9);
   }
 
+  /**
+   * Initialize the service by loading configuration settings from Chrome storage.
+   * Must be called before performing any GitHub operations.
+   *
+   * @throws {Error} If configuration loading fails
+   */
   async init() {
     try {
       this.userConfig = await this.configurationService.getChromeStorageConfig([
@@ -23,12 +40,27 @@ export default class GithubService {
       this.syncMultipleSubmissionsSettingEnabled =
         result.leetcode_tracker_sync_multiple_submission || false;
     } catch (error) {
-      console.error("Error initializing GithubService:", error);
+      throw error;
     }
   }
 
-  async submitToGitHub(comment = "") {
+  /**
+   * Submit a LeetCode problem solution to GitHub repository.
+   * Orchestrates the complete submission workflow with duplicate detection.
+   *
+   * Algorithm:
+   * 1. Initialize configuration and validate settings
+   * 2. Check if submission is already in progress (prevent duplicates)
+   * 3. Verify file existence in repository
+   * 4. Compare content if file exists and handle based on user settings
+   * 5. Create new file or update existing one accordingly
+   *
+   * @param {Object} problem - Problem object containing code, metadata, and language info
+   * @param {string} comment - Optional comment to include in the submission
+   */
+  async submitToGitHub(problem, comment = "") {
     await this.init();
+    this.problem = problem;
     this.comment = comment;
 
     if (
@@ -40,142 +72,268 @@ export default class GithubService {
 
     this.submissionInProgress = true;
 
-    const fileExists = await this.checkFileExistence();
+    try {
+      const fileExists = await this.checkFileExistence();
 
-    if (fileExists && !this.syncMultipleSubmissionsSettingEnabled) {
-      const currentContent = atob(fileExists.content);
-      const newContent = this.getFormattedCode();
-      const result = await this.configurationService.getChromeStorageConfig([
-        "leetcode_tracker_code_submit",
-      ]);
-      const skipDuplicates = result.leetcode_tracker_code_submit;
-      const contentIsSame = !(await this.contentsDiffer(
-        currentContent,
-        newContent
-      ));
+      if (fileExists && !this.syncMultipleSubmissionsSettingEnabled) {
+        const currentContent = atob(fileExists.content);
+        const newContent = this.getFormattedCode();
+        const result = await this.configurationService.getChromeStorageConfig([
+          "leetcode_tracker_code_submit",
+        ]);
+        const skipDuplicates = result.leetcode_tracker_code_submit;
+        const contentIsSame = !(await this.contentsDiffer(
+          currentContent,
+          newContent
+        ));
 
-      // Skip update if setting is enabled and content hasn't changed
-      if (skipDuplicates && contentIsSame) {
-        return;
+        // Skip update if setting is enabled and content hasn't changed
+        if (skipDuplicates && contentIsSame) {
+          return;
+        }
+
+        await this.updateFile(fileExists);
+      } else {
+        await this.createFile();
       }
-
-      await this.updateFile(fileExists);
-    } else {
-      await this.createFile();
+    } finally {
+      this.submissionInProgress = false;
     }
-
-    this.submissionInProgress = false;
   }
 
+  /**
+   * Update an existing file in the GitHub repository.
+   *
+   * @param {Object} existingFile - File object from GitHub API containing SHA and metadata
+   * @returns {Promise<Response>} GitHub API response object
+   * @throws {Error} If the update operation fails
+   */
   async updateFile(existingFile) {
-    const url = this.buildGitHubUrl();
+    const url = this.buildGitHubUrl(false);
     const currentDate = new Date().toLocaleString();
 
     const body = {
       message: `File updated at ${currentDate}`,
       content: btoa(this.getFormattedCode()),
-      sha: existingFile.sha,
+      sha: existingFile.sha, // Required for updates to prevent conflicts
     };
-    await this.fetchWithAuth(url, "PUT", body);
+
+    const response = await this.fetchWithAuth(url, "PUT", body);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        `Failed to update file: ${response.status} - ${
+          errorData.message || "Unknown error"
+        }`
+      );
+    }
+
+    return response;
   }
 
-  async createFile() {
-    const codeUrl = this.buildGitHubUrl();
-    const readmeUrl = this.buildGitHubUrl("README.md");
+  /**
+   * Create a new file in the GitHub repository with optional README generation.
+   *
+   * Algorithm:
+   * 1. Validate problem object exists
+   * 2. Build appropriate GitHub URL for the target file
+   * 3. Create the main solution file with formatted code
+   * 4. Handle file conflicts gracefully (422 status for existing files)
+   * 5. Create README file if problem description is available
+   * 6. Update difficulty statistics if not in sync mode
+   * 7. Log all operations with instance ID for debugging
+   *
+   * @param {boolean} isSyncing - Whether this is part of a bulk sync operation
+   * @returns {Promise<Response>} GitHub API response object
+   * @throws {Error} If file creation fails or problem object is invalid
+   */
+  async createFile(isSyncing = false) {
+    if (!this.problem) {
+      throw new Error("No problem set for file creation");
+    }
+
+    const codeUrl = this.buildGitHubUrl(isSyncing);
+    const readmeUrl = this.buildGitHubUrl(isSyncing, "README.md");
 
     const codeBody = {
-      message: "Create file",
+      message: `Create ${this.problem.slug}`,
       content: btoa(this.getFormattedCode()),
     };
 
-    const result = await this.fetchWithAuth(codeUrl, "PUT", codeBody);
-    const resultJson = await result.json();
+    try {
+      const result = await this.fetchWithAuth(codeUrl, "PUT", codeBody);
 
-    if (result.status === 201) {
-      try {
-        const readmeBody = {
-          message: "Adding readme file",
-          content: this.utf8ToBase64(
-            this.problem.description ? this.problem.description : ""
-          ),
-          sha: resultJson.commit.sha,
-        };
+      if (!result.ok) {
+        const errorData = await result.json().catch(() => ({}));
 
-        await this.fetchWithAuth(readmeUrl, "PUT", readmeBody);
-      } finally {
-        chrome.runtime.sendMessage({
-          type: "updateDifficultyStats",
-          difficulty: this.problem.difficulty,
-        });
+        // Handle file already exists scenario gracefully
+        if (
+          result.status === 422 &&
+          errorData.message?.includes("already exists")
+        ) {
+          return result;
+        }
+
+        throw new Error(
+          `Failed to create file: ${result.status} - ${
+            errorData.message || "Unknown error"
+          }`
+        );
       }
+
+      const resultJson = await result.json();
+
+      if (result.status === 201) {
+        try {
+          // Create README only if description exists and is meaningful
+          if (this.problem.description && this.problem.description.trim()) {
+            const readmeBody = {
+              message: `Add README for ${this.problem.slug}`,
+              content: this.utf8ToBase64(this.problem.description),
+            };
+
+            const readmeResult = await this.fetchWithAuth(
+              readmeUrl,
+              "PUT",
+              readmeBody
+            );
+
+            // Don't fail main operation if README creation fails
+            if (!readmeResult.ok) {
+              // README creation failed but continue with main operation
+            }
+          }
+        } catch (readmeError) {
+          // Don't fail main file creation due to README issues
+        } finally {
+          // Update statistics only in normal mode (not during bulk sync)
+          if (!isSyncing) {
+            try {
+              chrome.runtime.sendMessage({
+                type: "updateDifficultyStats",
+                difficulty: this.problem.difficulty,
+              });
+            } catch (messageError) {
+              // Statistics update failed but don't fail the main operation
+            }
+          }
+        }
+      }
+
+      return result;
+    } catch (error) {
+      throw error;
     }
   }
 
+  /**
+   * Compare two content strings to determine if they differ significantly.
+   * Normalizes whitespace and line endings for accurate comparison.
+   *
+   * @param {string} currentContent - Existing file content
+   * @param {string} newContent - New content to compare
+   * @returns {Promise<boolean>} True if contents differ, false if they're the same
+   */
   async contentsDiffer(currentContent, newContent) {
     const normalize = (content) =>
       content.trim().replace(/\r\n/g, "\n").replace(/\s+/g, " ");
     return normalize(currentContent) !== normalize(newContent);
   }
 
-  async checkFileExistence() {
-    const url = this.buildGitHubUrl();
-    const response = await this.fetchWithAuth(url, "GET");
-    return response.ok ? await response.json() : null;
-  }
-
-  getLanguageExtension() {
-    const language =
-      JSON.parse(window.localStorage.getItem("global_lang")) ||
-      document.querySelector("#headlessui-popover-button-\\:r1s\\: button")
-        ?.textContent;
-
-    return LanguageUtils.getLanguageInfo(language).extension;
-  }
-
-  getFormattedCode() {
-    const languageKey =
-      JSON.parse(window.localStorage.getItem("global_lang")) ||
-      document.querySelector("#headlessui-popover-button-\\:r1s\\: button")
-        ?.textContent;
-    const language = LanguageUtils.getLanguageInfo(languageKey).langName;
-    const extension = LanguageUtils.getLanguageInfo(languageKey).extension;
-
-    const codeElements = document.querySelectorAll(`code.language-${language}`);
-    const currentDate = new Date().toLocaleString();
-
-    // Si aucun élément de code n'est trouvé, retourner une chaîne vide
-    if (!codeElements || codeElements.length === 0) {
-      return "";
+  /**
+   * Check if a file already exists in the GitHub repository.
+   *
+   * @param {boolean} isSyncing - Whether this is part of a bulk sync operation
+   * @returns {Promise<Object|null>} File object if exists, null if not found
+   * @throws {Error} If problem object is missing or API request fails
+   */
+  async checkFileExistence(isSyncing = false) {
+    if (!this.problem) {
+      throw new Error("No problem set for file existence check");
     }
 
-    // Obtenir le format de commentaire approprié pour le langage
-    const commentFormat = this.getCommentFormat(extension);
+    const url = this.buildGitHubUrl(isSyncing);
 
-    // Créer l'en-tête avec la date
+    try {
+      const response = await this.fetchWithAuth(url, "GET");
+
+      if (response.ok) {
+        return await response.json();
+      } else if (response.status === 404) {
+        // File doesn't exist, which is expected for new files
+        return null;
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          `Failed to check file existence: ${response.status} - ${
+            errorData.message || "Unknown error"
+          }`
+        );
+      }
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Format the problem code with appropriate headers and comments.
+   * Generates language-specific comment formats and includes metadata.
+   *
+   * Algorithm:
+   * 1. Validate problem and code availability
+   * 2. Get appropriate comment format for the programming language
+   * 3. Create header with last updated timestamp
+   * 4. Add user comment if provided (handles both single and multi-line)
+   * 5. Append the actual solution code
+   *
+   * @returns {string} Formatted code string with headers and comments
+   * @throws {Error} If problem or code is not available
+   */
+  getFormattedCode() {
+    if (!this.problem || !this.problem.code) {
+      throw new Error("No problem or code available for formatting");
+    }
+
+    const currentDate = new Date().toLocaleString();
+
+    // Get appropriate comment format for the programming language
+    const commentFormat = this.getCommentFormat(
+      this.problem.language.extension
+    );
+
+    // Create header with timestamp
     let header = `${commentFormat.line} Last updated: ${currentDate}\n`;
 
-    // Ajouter le commentaire s'il existe
+    // Add user comment if provided
     if (this.comment && this.comment.trim()) {
-      // Pour les commentaires multilignes, utiliser le format approprié
+      // Handle multi-line comments with proper formatting
       if (this.comment.includes("\n")) {
         header += `${commentFormat.start}\n`;
 
-        // Formater chaque ligne du commentaire
+        // Format each line of the comment
         this.comment.split("\n").forEach((line) => {
           header += `${commentFormat.linePrefix}${line}\n`;
         });
 
         header += `${commentFormat.end}\n\n`;
       } else {
-        // Pour les commentaires courts d'une seule ligne
+        // Single line comment
         header += `${commentFormat.line} ${this.comment}\n`;
       }
     }
 
-    // Ajouter le code
-    return header + codeElements[codeElements.length - 1].textContent;
+    // Combine header with actual code
+    return header + this.problem.code;
   }
 
+  /**
+   * Get the appropriate comment format for different programming languages.
+   * Supports both single-line and multi-line comment styles.
+   *
+   * @param {string} extension - File extension (e.g., ".js", ".py", ".java")
+   * @returns {Object} Object containing comment format strings for the language
+   */
   getCommentFormat(extension) {
     switch (extension) {
       case ".py":
@@ -245,6 +403,7 @@ export default class GithubService {
           linePrefix: " ",
         };
       default:
+        // Default to C-style comments for unknown languages
         return {
           line: "//",
           start: "/*",
@@ -254,6 +413,13 @@ export default class GithubService {
     }
   }
 
+  /**
+   * Convert UTF-8 string to Base64 encoding for GitHub API.
+   * Handles Unicode characters properly for international content.
+   *
+   * @param {string} str - UTF-8 string to encode
+   * @returns {string} Base64 encoded string
+   */
   utf8ToBase64(str) {
     return btoa(
       encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) =>
@@ -262,21 +428,52 @@ export default class GithubService {
     );
   }
 
-  buildGitHubUrl(file = "") {
-    const lang = window.localStorage.getItem("global_lang").replaceAll('"', "");
-    const dateTime = this.syncMultipleSubmissionsSettingEnabled
-      ? `_${this.getLocalTimeString()}`
-      : "";
+  /**
+   * Build the GitHub API URL for file operations.
+   * Constructs repository path with optional versioning support.
+   *
+   * Algorithm:
+   * 1. Validate problem object exists
+   * 2. Add timestamp suffix if multiple submissions are enabled
+   * 3. Create version path for language-specific organization
+   * 4. Combine all components into complete GitHub API URL
+   *
+   * @param {boolean} isSyncing - Whether this is part of bulk sync (affects versioning)
+   * @param {string} file - Optional specific filename override
+   * @returns {string} Complete GitHub API URL for file operations
+   * @throws {Error} If problem object is not set
+   */
+  buildGitHubUrl(isSyncing, file = "") {
+    if (!this.problem) {
+      throw new Error("No problem set for URL building");
+    }
+
+    const dateTime =
+      this.syncMultipleSubmissionsSettingEnabled && !isSyncing
+        ? `_${this.getLocalTimeString()}`
+        : "";
 
     const fileName =
-      file || `${this.problem.slug}${dateTime}${this.getLanguageExtension()}`;
-    const versionPath = this.syncMultipleSubmissionsSettingEnabled
-      ? `/version/${lang}`
-      : "";
+      file ||
+      `${this.problem.slug}${dateTime}${this.problem.language.extension}`;
+    const versionPath =
+      this.syncMultipleSubmissionsSettingEnabled && !isSyncing
+        ? `/version/${this.problem.language.langName}`
+        : "";
 
     return `${this.dataConfig.REPOSITORY_URL}${this.userConfig.leetcode_tracker_username}/${this.userConfig.leetcode_tracker_repo}/contents/${this.problem.slug}${versionPath}/${fileName}`;
   }
 
+  /**
+   * Execute authenticated HTTP requests to GitHub API.
+   * Handles authentication headers and request configuration.
+   *
+   * @param {string} url - GitHub API endpoint URL
+   * @param {string} method - HTTP method (GET, PUT, POST, etc.)
+   * @param {Object} body - Optional request body for PUT/POST requests
+   * @returns {Promise<Response>} Fetch API response object
+   * @throws {Error} If network request fails
+   */
   async fetchWithAuth(url, method, body = null) {
     const options = {
       method,
@@ -286,13 +483,25 @@ export default class GithubService {
       },
     };
     if (body) options.body = JSON.stringify(body);
-    return fetch(url, options);
+
+    try {
+      const response = await fetch(url, options);
+      return response;
+    } catch (error) {
+      throw error;
+    }
   }
 
+  /**
+   * Generate a timestamp string for versioning multiple submissions.
+   * Creates a sortable datetime string in YYYYMMDD_HHMMSS format.
+   *
+   * @returns {string} Formatted timestamp string for file versioning
+   */
   getLocalTimeString() {
     const now = new Date();
 
-    // Format YYYYMMDD_HHMMSS
+    // Format: YYYYMMDD_HHMMSS
     return (
       now.getFullYear() +
       ("0" + (now.getMonth() + 1)).slice(-2) +

@@ -17,7 +17,11 @@ export default class ConfigurationService {
    * @returns {Promise<Object>} Data configuration object
    */
   async getDataConfig() {
-    return chrome.runtime.sendMessage({ type: "getDataConfig" });
+    return new Promise((resolve) => {
+      chrome.storage.local.get("leetcode_tracker_data_config", (result) => {
+        resolve(result.leetcode_tracker_data_config);
+      });
+    });
   }
 
   /**
