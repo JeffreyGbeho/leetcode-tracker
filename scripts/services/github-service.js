@@ -402,6 +402,13 @@ export default class GithubService {
           end: "|#",
           linePrefix: " ",
         };
+      case ".sql":
+        return {
+          line: "--",
+          start: "/*",
+          end: "*/",
+          linePrefix: " * ",
+        };
       default:
         // Default to C-style comments for unknown languages
         return {
