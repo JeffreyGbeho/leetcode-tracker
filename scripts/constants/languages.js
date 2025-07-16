@@ -18,10 +18,13 @@ export const baseLanguages = {
   racket: { langName: "racket", extension: ".rkt" },
   erlang: { langName: "erlang", extension: ".erl" },
   elixir: { langName: "elixir", extension: ".ex" },
+  mysql: { langName: "mysql", extension: ".sql" },
+  postgresql: { langName: "postgresql", extension: ".sql" },
 };
 
 export const alternativeNames = {
   "c++": "cpp",
   "c#": "csharp",
   go: "golang",
+  postgres: "postgresql",
 };
