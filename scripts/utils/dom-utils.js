@@ -1,4 +1,6 @@
 export default class DOMUtils {
+  static activeObservers = new Map();
+
   /**
    * Waits for an element matching the selector to appear in the DOM
    * @param {string} selector - CSS selector of the element to wait for
@@ -10,11 +12,18 @@ export default class DOMUtils {
       return existingElement;
     }
 
+    if (this.activeObservers.has(selector)) {
+      this.activeObservers.get(selector).disconnect();
+      this.activeObservers.delete(selector);
+    }
+
     return new Promise((resolve) => {
       const observer = new MutationObserver(() => {
         const element = document.querySelector(selector);
+        this.activeObservers.set(selector, observer);
         if (element) {
           observer.disconnect();
+          this.activeObservers.delete(selector);
           resolve(element);
         }
       });

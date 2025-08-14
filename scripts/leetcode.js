@@ -90,7 +90,7 @@ export default class LeetcodeTracker {
         "leetcode_tracker_comment_submission"
       );
       const isCommentEnabled =
-        result.leetcode_tracker_comment_submission || false;
+        result?.leetcode_tracker_comment_submission || false;
 
       const userComment = isCommentEnabled ? await this.showCommentPopup() : "";
       this.problem.extractLanguageFromDOM();
