@@ -1,4 +1,4 @@
-import LanguageUtils from "/scripts/utils/language-utils.js";
+import LanguageUtils from "../utils/language-utils.js";
 
 export default class Problem {
   constructor() {

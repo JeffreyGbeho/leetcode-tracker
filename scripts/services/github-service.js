@@ -1,4 +1,4 @@
-import ConfigurationService from "/scripts/services/configuration-service.js";
+import ConfigurationService from "./configuration-service.js";
 
 /**
  * Service for managing GitHub repository operations for LeetCode problem synchronization.

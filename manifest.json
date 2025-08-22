@@ -17,6 +17,10 @@
     "type": "module"
   },
   "permissions": ["unlimitedStorage", "storage"],
+  "host_permissions": [
+    "https://leetcode.com/*",
+    "https://api.github.com/*"
+  ],
   "content_scripts": [
     {
       "matches": ["https://leetcode.com/*", "https://github.com/*"],

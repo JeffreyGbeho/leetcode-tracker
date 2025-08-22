@@ -1,7 +1,4 @@
-import {
-  baseLanguages,
-  alternativeNames,
-} from "/scripts/constants/languages.js";
+import { baseLanguages, alternativeNames } from "../constants/languages.js";
 
 export default class LanguageUtils {
   /**
