@@ -1,7 +1,7 @@
-import LeetCodeService from "/scripts/services/leetcode-service.js";
-import GithubService from "/scripts/services/github-service.js";
-import Problem from "/scripts/models/problem.js";
-import LanguageUtils from "/scripts/utils/language-utils.js";
+import LeetCodeService from "./leetcode-service.js";
+import GithubService from "./github-service.js";
+import Problem from "../models/problem.js";
+import LanguageUtils from "../utils/language-utils.js";
 
 /**
  * Service responsible for synchronizing LeetCode solutions with GitHub repository.

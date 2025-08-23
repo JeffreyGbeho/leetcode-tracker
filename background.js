@@ -447,7 +447,7 @@ const controller = new LeetCodeTrackerController();
  * Initialize counter on startup if user is fully configured.
  * Ensures statistics are available immediately when extension starts.
  */
-(async function () {
+chrome.runtime.onStartup.addListener(async () => {
   try {
     const {
       leetcode_tracker_token,
@@ -472,7 +472,7 @@ const controller = new LeetCodeTrackerController();
   } catch (error) {
     // Handle initialization errors gracefully
   }
-})();
+});
 
 /**
  * Listen for storage changes and recalculate counters when repository configuration changes.
