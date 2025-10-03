@@ -34,9 +34,9 @@ export default class GithubService {
         "leetcode_tracker_token",
       ]);
       this.dataConfig = await this.configurationService.getDataConfig();
-      const result = await chrome.storage.local.get(
+      const result = await this.configurationService.getChromeStorageConfig([
         "leetcode_tracker_sync_multiple_submission"
-      );
+      ]);
       this.syncMultipleSubmissionsSettingEnabled =
         result.leetcode_tracker_sync_multiple_submission || false;
     } catch (error) {
@@ -114,7 +114,7 @@ export default class GithubService {
 
     const body = {
       message: `File updated at ${currentDate}`,
-      content: btoa(this.getFormattedCode()),
+      content: this.utf8ToBase64(this.getFormattedCode()),
       sha: existingFile.sha, // Required for updates to prevent conflicts
     };
 
@@ -158,7 +158,7 @@ export default class GithubService {
 
     const codeBody = {
       message: `Create ${this.problem.slug}`,
-      content: btoa(this.getFormattedCode()),
+      content: this.utf8ToBase64(this.getFormattedCode()),
     };
 
     try {
