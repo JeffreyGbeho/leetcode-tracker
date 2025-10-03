@@ -134,6 +134,18 @@ export default class Problem {
   }
 
   formatProblemName(problemName) {
-    return problemName.replace(".", "-").split(" ").join("");
+    if (!problemName) {
+      return "";
+    }
+
+    let formatted = problemName.toString().trim();
+
+    formatted = formatted.replace(/\./g, "-").replace(/\s+/g, "");
+
+    formatted = formatted.replace(/^[\/\-_]+|[\/\-_]+$/g, '');
+
+    formatted = formatted.replace(/\//g, '-');
+
+    return formatted;
   }
 }

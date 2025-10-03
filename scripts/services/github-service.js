@@ -455,6 +455,16 @@ export default class GithubService {
       throw new Error("No problem set for URL building");
     }
 
+    let sanitizedSlug = this.problem.slug || "";
+
+    sanitizedSlug = sanitizedSlug.trim().replace(/^\/+|\/+$/g, '');
+
+    sanitizedSlug = sanitizedSlug.replace(/\/+/g, '/');
+
+    if (!sanitizedSlug || sanitizedSlug === '/' || sanitizedSlug === '-') {
+      sanitizedSlug = `problem-${Date.now()}`;
+    }
+
     const dateTime =
       this.syncMultipleSubmissionsSettingEnabled && !isSyncing
         ? `_${this.getLocalTimeString()}`
@@ -462,13 +472,13 @@ export default class GithubService {
 
     const fileName =
       file ||
-      `${this.problem.slug}${dateTime}${this.problem.language.extension}`;
+      `${sanitizedSlug}${dateTime}${this.problem.language.extension}`;
     const versionPath =
       this.syncMultipleSubmissionsSettingEnabled && !isSyncing
         ? `/version/${this.problem.language.langName}`
         : "";
 
-    return `${this.dataConfig.REPOSITORY_URL}${this.userConfig.leetcode_tracker_username}/${this.userConfig.leetcode_tracker_repo}/contents/${this.problem.slug}${versionPath}/${fileName}`;
+    return `${this.dataConfig.REPOSITORY_URL}${this.userConfig.leetcode_tracker_username}/${this.userConfig.leetcode_tracker_repo}/contents/${sanitizedSlug}${versionPath}/${fileName}`;
   }
 
   /**

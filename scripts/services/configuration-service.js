@@ -8,7 +8,16 @@ export default class ConfigurationService {
    */
   async getChromeStorageConfig(properties) {
     return new Promise((resolve) => {
-      chrome.storage.local.get(properties, resolve);
+      if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.get(properties, resolve);
+      } else {
+        chrome.runtime.sendMessage(
+          { type: "getStorageConfig", properties },
+          (response) => {
+            resolve(response || {});
+          }
+        );
+      }
     });
   }
 
@@ -18,9 +27,18 @@ export default class ConfigurationService {
    */
   async getDataConfig() {
     return new Promise((resolve) => {
-      chrome.storage.local.get("leetcode_tracker_data_config", (result) => {
-        resolve(result.leetcode_tracker_data_config);
-      });
+      if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.get("leetcode_tracker_data_config", (result) => {
+          resolve(result.leetcode_tracker_data_config);
+        });
+      } else {
+        chrome.runtime.sendMessage(
+          { type: "getDataConfig" },
+          (response) => {
+            resolve(response || {});
+          }
+        );
+      }
     });
   }
 

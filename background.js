@@ -240,6 +240,10 @@ class LeetCodeTrackerController {
         getDataConfig: () => {
           sendResponse(ENV);
         },
+        getStorageConfig: async () => {
+          const result = await chrome.storage.local.get(request.properties);
+          sendResponse(result);
+        },
         saveUserInfos: () => {
           this.saveUserInfos(request);
           sendResponse({ success: true });
