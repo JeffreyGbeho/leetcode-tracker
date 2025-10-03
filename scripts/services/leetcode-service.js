@@ -114,93 +114,113 @@ export default class LeetCodeService {
       // Delay to respect API rate limits
       await this.sleep(500);
 
-      const submissionsResponse = await fetch("https://leetcode.com/graphql", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          query: `
-            query submissionList($offset: Int!, $limit: Int!, $lastKey: String, $questionSlug: String!, $lang: Int, $status: Int) {
-  questionSubmissionList(
-    offset: $offset
-    limit: $limit
-    lastKey: $lastKey
-    questionSlug: $questionSlug
-    lang: $lang
-    status: $status
-  ) {
-    lastKey
-    hasNext
-    submissions {
-      id
-      title
-      titleSlug
-      status
-      statusDisplay
-      lang
-      langName
-      runtime
-      timestamp
-      url
-      isPending
-      memory
-      hasNotes
-      notes
-      flagType
-      frontendId
-      topicTags {
+      let allSubmissions = [];
+      let offset = 0;
+      let hasNext = true;
+      let lastKey = null;
+      const limit = 20;
+
+      // Fetch all submissions with pagination
+      while (hasNext) {
+        const submissionsResponse = await fetch("https://leetcode.com/graphql", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            query: `
+              query submissionList($offset: Int!, $limit: Int!, $lastKey: String, $questionSlug: String!, $lang: Int, $status: Int) {
+    questionSubmissionList(
+      offset: $offset
+      limit: $limit
+      lastKey: $lastKey
+      questionSlug: $questionSlug
+      lang: $lang
+      status: $status
+    ) {
+      lastKey
+      hasNext
+      submissions {
         id
+        title
+        titleSlug
+        status
+        statusDisplay
+        lang
+        langName
+        runtime
+        timestamp
+        url
+        isPending
+        memory
+        hasNotes
+        notes
+        flagType
+        frontendId
+        topicTags {
+          id
+        }
       }
     }
   }
-}
-          `,
-          variables: {
-            questionSlug: titleSlug,
-            offset: 0,
-            limit: 20, // Reduced limit to avoid timeouts
-            lastKey: "null",
-            status: 10, // Only accepted submissions
-          },
-        }),
-      });
+            `,
+            variables: {
+              questionSlug: titleSlug,
+              offset: offset,
+              limit: limit,
+              lastKey: lastKey,
+              status: 10, // Only accepted submissions
+            },
+          }),
+        });
 
-      // Check HTTP status for rate limiting indicators
-      if (!submissionsResponse.ok) {
-        const error = new Error(`HTTP error: ${submissionsResponse.status}`);
-        error.needsPause =
-          submissionsResponse.status === 429 ||
-          submissionsResponse.status >= 500;
-        throw error;
+        // Check HTTP status for rate limiting indicators
+        if (!submissionsResponse.ok) {
+          const error = new Error(`HTTP error: ${submissionsResponse.status}`);
+          error.needsPause =
+            submissionsResponse.status === 429 ||
+            submissionsResponse.status >= 500;
+          throw error;
+        }
+
+        const submissionsData = await submissionsResponse.json();
+
+        // Check for GraphQL errors which often indicate rate limiting
+        if (submissionsData.errors) {
+          const error = new Error(
+            `GraphQL errors: ${submissionsData.errors
+              .map((e) => e.message)
+              .join(", ")}`
+          );
+          error.needsPause = true;
+          throw error;
+        }
+
+        // Validate response structure
+        if (
+          !submissionsData.data ||
+          !submissionsData.data.questionSubmissionList
+        ) {
+          const error = new Error(
+            "Invalid submission list response - API rate limit likely reached"
+          );
+          error.needsPause = true;
+          throw error;
+        }
+
+        const submissionList = submissionsData.data.questionSubmissionList;
+        allSubmissions = allSubmissions.concat(submissionList.submissions);
+
+        hasNext = submissionList.hasNext;
+        lastKey = submissionList.lastKey;
+        offset += limit;
+
+        // Add delay between pagination requests
+        if (hasNext) {
+          await this.sleep(300);
+        }
       }
 
-      const submissionsData = await submissionsResponse.json();
-
-      // Check for GraphQL errors which often indicate rate limiting
-      if (submissionsData.errors) {
-        const error = new Error(
-          `GraphQL errors: ${submissionsData.errors
-            .map((e) => e.message)
-            .join(", ")}`
-        );
-        error.needsPause = true;
-        throw error;
-      }
-
-      // Validate response structure
-      if (
-        !submissionsData.data ||
-        !submissionsData.data.questionSubmissionList
-      ) {
-        const error = new Error(
-          "Invalid submission list response - API rate limit likely reached"
-        );
-        error.needsPause = true;
-        throw error;
-      }
-
-      const submissions =
-        submissionsData.data.questionSubmissionList.submissions;
+      const submissions = allSubmissions;
 
       // Filter for accepted submissions only
       const acceptedSubmissions = submissions.filter(
