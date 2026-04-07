@@ -141,8 +141,12 @@ class GitHubService {
     const result = await chrome.storage.local.get([
       "leetcode_tracker_username",
       "leetcode_tracker_repo",
+      "leetcode_tracker_subfolder",
     ]);
-    return `${this.env.REPOSITORY_URL}${result.leetcode_tracker_username}/${result.leetcode_tracker_repo}/contents/`;
+    const subfolder = result.leetcode_tracker_subfolder
+      ? `${result.leetcode_tracker_subfolder}/`
+      : "";
+    return `${this.env.REPOSITORY_URL}${result.leetcode_tracker_username}/${result.leetcode_tracker_repo}/contents/${subfolder}`;
   }
 
   /**

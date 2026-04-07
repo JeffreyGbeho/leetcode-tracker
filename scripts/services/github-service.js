@@ -32,6 +32,7 @@ export default class GithubService {
         "leetcode_tracker_repo",
         "leetcode_tracker_username",
         "leetcode_tracker_token",
+        "leetcode_tracker_subfolder",
       ]);
       this.dataConfig = await this.configurationService.getDataConfig();
       const result = await this.configurationService.getChromeStorageConfig([
@@ -478,7 +479,11 @@ export default class GithubService {
         ? `/version/${this.problem.language.langName}`
         : "";
 
-    return `${this.dataConfig.REPOSITORY_URL}${this.userConfig.leetcode_tracker_username}/${this.userConfig.leetcode_tracker_repo}/contents/${sanitizedSlug}${versionPath}/${fileName}`;
+    const subfolder = this.userConfig.leetcode_tracker_subfolder
+      ? `${this.userConfig.leetcode_tracker_subfolder}/`
+      : "";
+
+    return `${this.dataConfig.REPOSITORY_URL}${this.userConfig.leetcode_tracker_username}/${this.userConfig.leetcode_tracker_repo}/contents/${subfolder}${sanitizedSlug}${versionPath}/${fileName}`;
   }
 
   /**

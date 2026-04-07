@@ -8,6 +8,7 @@ const DOM = {
   hookRepo: document.getElementById("hook-repo"),
   authenticated: document.getElementById("authenticated"),
   repoName: document.getElementById("repo-name"),
+  subfolderPath: document.getElementById("subfolder-path"),
   repoNameError: document.getElementById("repo-name-error"),
   hookButton: document.getElementById("hook-button"),
   unlinkButton: document.getElementById("unlink-button"),
@@ -412,19 +413,25 @@ class PopupManager {
    * Constructs the repository link for easy access to the GitHub repository.
    */
   async updateUserInfos() {
-    const { leetcode_tracker_repo, leetcode_tracker_username } =
+    const { leetcode_tracker_repo, leetcode_tracker_username, leetcode_tracker_subfolder } =
       await chrome.storage.local.get([
         "leetcode_tracker_repo",
         "leetcode_tracker_username",
+        "leetcode_tracker_subfolder",
       ]);
     if (leetcode_tracker_repo) {
-      DOM.repositoryName.textContent = leetcode_tracker_repo;
+      DOM.repositoryName.textContent = leetcode_tracker_subfolder
+        ? `${leetcode_tracker_repo} / ${leetcode_tracker_subfolder}`
+        : leetcode_tracker_repo;
     }
     if (leetcode_tracker_username) {
       DOM.githubUsername.textContent = leetcode_tracker_username;
     }
     if (leetcode_tracker_username && leetcode_tracker_repo) {
-      DOM.repositoryLink.href = `https://github.com/${leetcode_tracker_username}/${leetcode_tracker_repo}`;
+      const subfolderSegment = leetcode_tracker_subfolder
+        ? `/tree/main/${leetcode_tracker_subfolder}`
+        : "";
+      DOM.repositoryLink.href = `https://github.com/${leetcode_tracker_username}/${leetcode_tracker_repo}${subfolderSegment}`;
     }
   }
 
@@ -527,6 +534,11 @@ class PopupManager {
       return;
     }
 
+    // Sanitize subfolder path
+    let subfolderPath = (DOM.subfolderPath.value || "").trim();
+    subfolderPath = subfolderPath.replace(/^\/+|\/+$/g, "");
+    subfolderPath = subfolderPath.replace(/\/\/+/g, "/");
+
     try {
       const result = await chrome.storage.local.get([
         "leetcode_tracker_token",
@@ -534,7 +546,7 @@ class PopupManager {
       ]);
 
       if (result) {
-        await this.linkRepo(result, repositoryName);
+        await this.linkRepo(result, repositoryName, subfolderPath);
       }
     } catch (error) {
       DOM.repoNameError.textContent =
@@ -557,7 +569,7 @@ class PopupManager {
    * @param {Object} githubAuthData - Authentication data with token and username
    * @param {string} repositoryName - Name of repository to link
    */
-  async linkRepo(githubAuthData, repositoryName) {
+  async linkRepo(githubAuthData, repositoryName, subfolderPath = "") {
     const { leetcode_tracker_token, leetcode_tracker_username } =
       githubAuthData;
     const dataConfig = await chrome.runtime.sendMessage({
@@ -589,6 +601,7 @@ class PopupManager {
       await chrome.storage.local.set({
         leetcode_tracker_mode: "commit",
         leetcode_tracker_repo: repositoryName,
+        leetcode_tracker_subfolder: subfolderPath,
       });
 
       DOM.hookRepo.style.display = "none";
@@ -607,6 +620,7 @@ class PopupManager {
       await chrome.storage.local.remove([
         "leetcode_tracker_mode",
         "leetcode_tracker_repo",
+        "leetcode_tracker_subfolder",
       ]);
       DOM.authenticated.style.display = "none";
       DOM.hookRepo.style.display = "block";

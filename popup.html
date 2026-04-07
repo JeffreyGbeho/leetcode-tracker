@@ -46,23 +46,29 @@
           Create a github repository and enter the name to link it for tracking
           your progress.
         </p>
-        <div class="input-group">
+        <div class="hook-form">
           <input
             type="text"
             id="repo-name"
             class="form-control"
             placeholder="Ex: leetcode-solutions"
           />
-          <div class="input-group-text btn-suffix" id="hook-button">
-            <span>Link</span>
-          </div>
-        </div>
-        <div id="repo-name-error" class="text-danger font-italic"></div>
-
-        <div class="button-auth-container">
-          <button type="button" class="button-auth" id="change-account-button">
-            Change github account
+          <input
+            type="text"
+            id="subfolder-path"
+            class="form-control"
+            placeholder="Subfolder path (optional)"
+          />
+          <button type="button" class="hook-form-submit" id="hook-button">
+            Link repository
           </button>
+          <div id="repo-name-error" class="text-danger font-italic"></div>
+        </div>
+
+        <div class="change-account-container">
+          <span class="change-account-link" id="change-account-button">
+            Change github account
+          </span>
         </div>
       </div>
 

@@ -71,6 +71,46 @@ button.button-auth {
   gap: 5px;
 }
 
+.hook-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hook-form-submit {
+  width: 100%;
+  background-color: var(--black);
+  color: white;
+  border: none;
+  padding: 10px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Poppins-Medium';
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.hook-form-submit:hover {
+  opacity: 0.85;
+}
+
+.change-account-container {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.change-account-link {
+  color: var(--title);
+  font-family: 'Poppins-Regular';
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.change-account-link:hover {
+  color: var(--black);
+}
+
 #repo-name-error {
   font-family: "Poppins-Regular";
   font-size: 12px;
@@ -95,6 +135,7 @@ div.input-group-text.btn-suffix {
   color: white;
   background-color: var(--black);
 }
+
 
 /* input.form-control:focus {
   border-color: var(--black);
