@@ -141,9 +141,7 @@ export default class GithubService {
    * 2. Build appropriate GitHub URL for the target file
    * 3. Create the main solution file with formatted code
    * 4. Handle file conflicts gracefully (422 status for existing files)
-   * 5. Create README file if problem description is available
-   * 6. Update difficulty statistics if not in sync mode
-   * 7. Log all operations with instance ID for debugging
+   * 5. Outside of bulk sync, create the README and update difficulty statistics
    *
    * @param {boolean} isSyncing - Whether this is part of a bulk sync operation
    * @returns {Promise<Response>} GitHub API response object
@@ -155,7 +153,6 @@ export default class GithubService {
     }
 
     const codeUrl = this.buildGitHubUrl(isSyncing);
-    const readmeUrl = this.buildGitHubUrl(isSyncing, "README.md");
 
     const codeBody = {
       message: `Create ${this.problem.slug}`,
@@ -183,48 +180,64 @@ export default class GithubService {
         );
       }
 
-      const resultJson = await result.json();
+      // Update statistics and README only in normal mode. During bulk sync the
+      // README is handled once per problem folder by SyncService, which shares
+      // it across every language of the problem.
+      if (result.status === 201 && !isSyncing) {
+        await this.ensureReadme(isSyncing);
 
-      if (result.status === 201) {
         try {
-          // Create README only if description exists and is meaningful
-          if (this.problem.description && this.problem.description.trim()) {
-            const readmeBody = {
-              message: `Add README for ${this.problem.slug}`,
-              content: this.utf8ToBase64(this.problem.description),
-            };
-
-            const readmeResult = await this.fetchWithAuth(
-              readmeUrl,
-              "PUT",
-              readmeBody
-            );
-
-            // Don't fail main operation if README creation fails
-            if (!readmeResult.ok) {
-              // README creation failed but continue with main operation
-            }
-          }
-        } catch (readmeError) {
-          // Don't fail main file creation due to README issues
-        } finally {
-          // Update statistics only in normal mode (not during bulk sync)
-          if (!isSyncing) {
-            try {
-              chrome.runtime.sendMessage({
-                type: "updateDifficultyStats",
-                difficulty: this.problem.difficulty,
-              });
-            } catch (messageError) {
-              // Statistics update failed but don't fail the main operation
-            }
-          }
+          chrome.runtime.sendMessage({
+            type: "updateDifficultyStats",
+            difficulty: this.problem.difficulty,
+          });
+        } catch (messageError) {
+          // Statistics update failed but don't fail the main operation
         }
       }
 
       return result;
     } catch (error) {
       throw error;
+    }
+  }
+
+  /**
+   * Create the problem README when it is missing from the repository.
+   *
+   * Existence is checked independently from the solution file so that folders
+   * pushed by earlier versions of the extension - which only uploaded code -
+   * get their description backfilled on the next synchronization.
+   *
+   * A README is never overwritten: the user may have edited it, and a failure
+   * here must never break the solution upload.
+   *
+   * @param {boolean} isSyncing - Whether this is part of a bulk sync operation
+   * @returns {Promise<boolean>} True if a README was created
+   */
+  async ensureReadme(isSyncing = false) {
+    if (!this.problem || !this.problem.description?.trim()) {
+      return false;
+    }
+
+    const readmeUrl = this.buildGitHubUrl(isSyncing, "README.md");
+
+    try {
+      const existing = await this.fetchWithAuth(readmeUrl, "GET");
+
+      // Anything other than a confirmed 404 is left untouched.
+      if (existing.status !== 404) {
+        return false;
+      }
+
+      const response = await this.fetchWithAuth(readmeUrl, "PUT", {
+        message: `Add README for ${this.problem.slug}`,
+        content: this.utf8ToBase64(this.problem.description),
+      });
+
+      return response.ok;
+    } catch (error) {
+      return false;
     }
   }
 

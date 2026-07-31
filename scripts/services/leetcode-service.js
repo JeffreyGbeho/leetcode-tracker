@@ -292,7 +292,11 @@ export default class LeetCodeService {
     }
     question {
       questionId
+      questionFrontendId
+      title
       titleSlug
+      difficulty
+      content
       hasFrontendPreview
     }
     notes
@@ -371,8 +375,14 @@ export default class LeetCodeService {
 
         result[lang] = {
           questionId: details.question.questionId,
+          questionFrontendId: details.question.questionFrontendId,
           title: this.kebabToPascalCase(details.question.titleSlug),
+          // Human readable title, kept apart from the PascalCase folder name.
+          problemTitle: details.question.title,
           titleSlug: details.question.titleSlug,
+          difficulty: details.question.difficulty,
+          // Null for premium problems when the user has no active subscription.
+          content: details.question.content,
           status_display: "Accepted",
           code: details.code,
           timestamp: details.timestamp,

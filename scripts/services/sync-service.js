@@ -2,6 +2,7 @@ import LeetCodeService from "./leetcode-service.js";
 import GithubService from "./github-service.js";
 import Problem from "../models/problem.js";
 import LanguageUtils from "../utils/language-utils.js";
+import ReadmeUtils from "../utils/readme-utils.js";
 
 /**
  * Service responsible for synchronizing LeetCode solutions with GitHub repository.
@@ -361,7 +362,8 @@ export default class SyncService {
    * 2. Fetch all submissions for the problem by language
    * 3. For each language submission, create a Problem object
    * 4. Queue GitHub operations to check/create files
-   * 5. Track statistics based on whether files were created or already existed
+   * 5. Write the shared README once, backfilling folders synced by older versions
+   * 6. Track statistics based on whether files were created or already existed
    *
    * @param {Object} problem - LeetCode problem object with metadata
    * @param {number} index - Current processing index for progress tracking
@@ -381,6 +383,8 @@ export default class SyncService {
 
       let newFilesCreated = 0;
       let totalFilesForProblem = 0;
+      let readme = "";
+      let lastProblemObj = null;
 
       for (const lang in submissionsByLanguage) {
         const submission = submissionsByLanguage[lang];
@@ -392,6 +396,15 @@ export default class SyncService {
         );
         problemObj.language = LanguageUtils.getLanguageInfo(submission.lang);
         problemObj.code = submission.code;
+
+        // Every language of a problem lands in the same folder, so they all
+        // share a single README built once from the problem statement.
+        if (!readme) {
+          readme = ReadmeUtils.build(submission);
+        }
+
+        problemObj.description = readme;
+        lastProblemObj = problemObj;
 
         totalFilesForProblem++;
 
@@ -412,6 +425,22 @@ export default class SyncService {
         });
 
         if (fileCreated) {
+          newFilesCreated++;
+        }
+      }
+
+      // Written once per problem, after the languages, so that folders whose
+      // solutions already existed still get their description backfilled.
+      if (lastProblemObj && readme) {
+        const readmeCreated = await this.processGithubOperation(async () => {
+          const githubService = new GithubService();
+          githubService.problem = lastProblemObj;
+
+          await githubService.init();
+          return githubService.ensureReadme(true);
+        });
+
+        if (readmeCreated) {
           newFilesCreated++;
         }
       }
