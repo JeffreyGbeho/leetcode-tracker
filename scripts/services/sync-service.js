@@ -390,7 +390,11 @@ export default class SyncService {
         const submission = submissionsByLanguage[lang];
 
         const problemObj = new Problem();
-        problemObj.slug = `${submission.questionId}-${submission.title}`;
+        // questionFrontendId is the number LeetCode displays and the one the
+        // README uses; questionId is an internal database id that drifts from it.
+        const questionNumber =
+          submission.questionFrontendId || submission.questionId;
+        problemObj.slug = `${questionNumber}-${submission.title}`;
         problemObj.difficulty = this.difficultyLevelToString(
           problem.difficulty.level
         );

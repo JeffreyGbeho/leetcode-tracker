@@ -14,7 +14,7 @@ export default class LeetCodeService {
    * Fetches all questions from LeetCode GraphQL API with their difficulty levels.
    * Used to get comprehensive problem metadata.
    *
-   * @returns {Promise<Object[]>} Array of question objects with questionId and difficulty
+   * @returns {Promise<Object[]>} Array of question objects with questionId, questionFrontendId and difficulty
    */
   async fetchAllQuestionsDifficulty() {
     const graphqlQuery = {
@@ -22,6 +22,7 @@ export default class LeetCodeService {
         query allQuestions {
           allQuestions {
             questionId
+            questionFrontendId
             difficulty
           }
         }

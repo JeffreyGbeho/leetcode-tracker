@@ -382,8 +382,10 @@ class LeetCodeTrackerController {
       ]);
 
       // Create efficient lookup map for difficulty information
+      // Folder names are prefixed with the number LeetCode displays, so the
+      // lookup keys on questionFrontendId rather than the internal questionId.
       const difficultyMap = new Map(
-        allQuestions.map((q) => [q.questionId, q.difficulty])
+        allQuestions.map((q) => [q.questionFrontendId || q.questionId, q.difficulty])
       );
 
       // Map problems to their difficulties
