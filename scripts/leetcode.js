@@ -30,7 +30,7 @@
      * 3. Attach click handler to monitor submission attempts
      */
     async init() {
-      this.problem.loadProblemFromDOM();
+      await this.problem.loadProblemFromDOM();
       await DOMUtils.waitForElement(
         `${domElements.submitButton}:not([data-state="closed"])`
       );

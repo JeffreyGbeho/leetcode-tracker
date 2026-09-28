@@ -8,14 +8,27 @@ export default class Problem {
     this.problemUrl = "";
     this.code = "";
     this.language = {};
+    this.loadToken = 0;
   }
 
+  /**
+   * Reload problem metadata for the current LeetCode page.
+   * Resets slug/difficulty/description first so a submission that races ahead
+   * of extraction never reuses the previous problem's stale metadata, then
+   * returns a Promise that resolves once extraction completes (or times out).
+   */
   loadProblemFromDOM() {
+    this.slug = "";
+    this.difficulty = "";
+    this.description = "";
+
     const url = this.getDescriptionUrl();
 
-    if (url) {
-      this.extractProblemInfos(url);
+    if (!url) {
+      return Promise.resolve();
     }
+
+    return this.extractProblemInfos(url);
   }
 
   getDescriptionUrl() {
@@ -51,51 +64,62 @@ export default class Problem {
   }
 
   extractProblemInfos(url) {
-    const iframe = document.createElement("iframe");
+    const token = ++this.loadToken;
 
-    // Invisible iframe
-    iframe.style.position = "absolute";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.style.border = "none";
-    iframe.style.opacity = "0";
-    iframe.style.pointerEvents = "none";
+    return new Promise((resolve) => {
+      const iframe = document.createElement("iframe");
 
-    iframe.src = url;
+      // Invisible iframe
+      iframe.style.position = "absolute";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "none";
+      iframe.style.opacity = "0";
+      iframe.style.pointerEvents = "none";
 
-    // Observer to retrieve data from the iframe
-    iframe.onload = () => {
-      const iframeDocument =
-        iframe.contentDocument || iframe.contentWindow.document;
+      iframe.src = url;
 
-      const observer = new MutationObserver((mutations, obs) => {
-        // Extract data from the iframe
-        this.extractDifficultyFromDOM(iframeDocument);
-        this.extractDescriptionFromDOM(iframeDocument);
-        this.extractSlugFromDOM(iframeDocument);
-
-        // If all data is extracted, stop the observer
-        if (this.difficulty && this.description && this.slug) {
-          obs.disconnect();
-          document.body.removeChild(iframe);
-        }
-      });
-
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-      });
-
-      // Stop the observer after 3 seconds and remove the iframe
-      setTimeout(() => {
+      const cleanup = (observer) => {
         observer.disconnect();
         if (document.body.contains(iframe)) {
           document.body.removeChild(iframe);
         }
-      }, 3000);
-    };
+        resolve();
+      };
 
-    document.body.appendChild(iframe);
+      // Observer to retrieve data from the iframe
+      iframe.onload = () => {
+        const iframeDocument =
+          iframe.contentDocument || iframe.contentWindow.document;
+
+        const observer = new MutationObserver((mutations, obs) => {
+          if (token !== this.loadToken) {
+            cleanup(obs);
+            return;
+          }
+
+          // Extract data from the iframe
+          this.extractDifficultyFromDOM(iframeDocument);
+          this.extractDescriptionFromDOM(iframeDocument);
+          this.extractSlugFromDOM(iframeDocument);
+
+          // If all data is extracted, stop the observer
+          if (this.difficulty && this.description && this.slug) {
+            cleanup(obs);
+          }
+        });
+
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true,
+        });
+
+        // Stop the observer after 3 seconds and remove the iframe
+        setTimeout(() => cleanup(observer), 3000);
+      };
+
+      document.body.appendChild(iframe);
+    });
   }
 
   async extractSlugFromDOM(iframeContent) {

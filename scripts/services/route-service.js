@@ -6,18 +6,23 @@ export default class RouteService {
   constructor(onRouteChange) {
     this.problemSlug = this.extractProblemSlugFromUrl(location.pathname);
     this.onRouteChange = onRouteChange;
+    this.routeChangeTimeout = null;
     this.observeUrlChanges();
   }
 
   observeUrlChanges() {
     const observer = new MutationObserver(() => {
-      if (
-        this.problemSlug !== this.extractProblemSlugFromUrl(location.pathname)
-      ) {
-        observer.disconnect();
-        this.problemSlug = this.extractProblemSlugFromUrl(location.pathname);
+      const currentSlug = this.extractProblemSlugFromUrl(location.pathname);
 
-        setTimeout(() => {
+      if (this.problemSlug !== currentSlug) {
+        this.problemSlug = currentSlug;
+
+        if (this.routeChangeTimeout) {
+          clearTimeout(this.routeChangeTimeout);
+        }
+
+        this.routeChangeTimeout = setTimeout(() => {
+          this.routeChangeTimeout = null;
           this.onRouteChange();
         }, 1000);
       }
